@@ -1,0 +1,986 @@
+{
+  "version": 1,
+  "params": {
+    "timing.offsetMs": -15.668896,
+    "timing.windowScale": 1.0609,
+    "shot.pull.az": -1.583798,
+    "shot.flick.az": -1.540397,
+    "shot.pull.drift": 0.51,
+    "shot.flick.drift": 0.79475,
+    "shot.punch.line0": -0.17,
+    "shot.glance.len.full": 0.95,
+    "shot.glance.len.good": 1,
+    "shot.glance.len.short": 0.55,
+    "shot.pull.len.good": 0.41,
+    "shot.flick.len.full": 1,
+    "shot.flick.len.good": 0.8,
+    "shot.flick.line1": 0.01,
+    "shot.scoop.len.good": 0.61,
+    "shot.scoop.line0": -0.185,
+    "k.missCoef": 0.736,
+    "k.spread": 0.152
+  },
+  "exportedAt": "2026-10-31T07:33:37.764Z",
+  "log": [
+    {
+      "at": "2026-10-31T06:31:40.669Z",
+      "level": "medium",
+      "sample": {
+        "ball": 10,
+        "rawErr": -0.10116602912190686,
+        "err": -0.10116602912190686,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.9,
+        "shotKey": "sweep",
+        "lofted": false,
+        "length": "full",
+        "line": "pads",
+        "type": "outswinger",
+        "ballZ": -0.23144649491895777,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "call": "Beaten",
+        "read": "Outswinger · full · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [
+          "glance"
+        ],
+        "good": [
+          "sweep"
+        ]
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": 0,
+          "to": -25.291507280476715,
+          "reason": "you felt right at -101 ms raw"
+        },
+        {
+          "id": "k.missCoef",
+          "from": 0.8,
+          "to": 0.7360000000000001,
+          "reason": "too harsh: beaten"
+        },
+        {
+          "id": "shot.glance.len.full",
+          "from": 0.85,
+          "to": 0.95,
+          "reason": "you marked glance ideal for a full ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T06:35:24.522Z",
+      "level": "medium",
+      "sample": {
+        "ball": 30,
+        "rawErr": -0.04903329985537887,
+        "err": -0.023741792574902148,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.9,
+        "shotKey": "glance",
+        "lofted": false,
+        "length": "good",
+        "line": "pads",
+        "type": "outswinger",
+        "ballZ": -0.2883668102548698,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.7281703152873247,
+        "call": "1 run",
+        "read": "Outswinger · good · pads"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [
+          "glance"
+        ],
+        "good": [
+          "pull",
+          "scoop",
+          "punch"
+        ]
+      },
+      "changes": [
+        {
+          "id": "shot.glance.len.good",
+          "from": 0.9,
+          "to": 1,
+          "reason": "you marked glance ideal for a good ball"
+        },
+        {
+          "id": "shot.pull.len.good",
+          "from": 0.35,
+          "to": 0.41,
+          "reason": "you marked pull OK for a good ball"
+        },
+        {
+          "id": "shot.scoop.len.good",
+          "from": 0.55,
+          "to": 0.6100000000000001,
+          "reason": "you marked scoop OK for a good ball"
+        },
+        {
+          "id": "shot.scoop.line0",
+          "from": -0.16,
+          "to": -0.185,
+          "reason": "line band toward the ball"
+        },
+        {
+          "id": "shot.punch.line0",
+          "from": -0.12,
+          "to": -0.145,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T06:38:09.473Z",
+      "level": "medium",
+      "sample": {
+        "ball": 41,
+        "rawErr": -0.022422706303580703,
+        "err": 0.002868800976896013,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": false,
+        "length": "short",
+        "line": "pads",
+        "type": "outswinger",
+        "ballZ": -0.20708447449254566,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.9964343153284281,
+        "call": "1 run",
+        "read": "Outswinger · short · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 0,
+        "ideal": [
+          "pull",
+          "glance"
+        ],
+        "good": [
+          "punch"
+        ]
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -25.291507280476715,
+          "to": -24.574307036252712,
+          "reason": "you felt right at -22 ms raw"
+        },
+        {
+          "id": "shot.glance.len.short",
+          "from": 0.45,
+          "to": 0.55,
+          "reason": "you marked glance ideal for a short ball"
+        },
+        {
+          "id": "shot.punch.line0",
+          "from": -0.145,
+          "to": -0.16999999999999998,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:01:33.635Z",
+      "level": "medium",
+      "sample": {
+        "ball": 4,
+        "rawErr": -0.04137755463812036,
+        "err": -0.016803247638120355,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "straight",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.7623417976836206,
+        "line": "stumps",
+        "type": "straight",
+        "ballZ": -0.09350480874332293,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.8846640009851926,
+        "az": 0.0024334126069812806,
+        "aimAz": 0,
+        "driftAz": -0.08977735166652875,
+        "scatter": 0.09221076427351003,
+        "call": "FOUR",
+        "read": "Straight ball · full · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 0,
+        "ideal": [
+          "straight"
+        ],
+        "good": [],
+        "dir": 0
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -24.574307,
+          "to": -28.77511890953009,
+          "reason": "you felt right at -41 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:05:39.246Z",
+      "level": "medium",
+      "sample": {
+        "ball": 15,
+        "rawErr": -0.03542471155567094,
+        "err": -0.006649592646140845,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.6110534823247377,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.6405519533553163,
+        "line": "stumps",
+        "type": "straight",
+        "ballZ": 0.045628593939013626,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.7139042705894693,
+        "az": -0.9820271690261348,
+        "aimAz": -1.0821041362364843,
+        "driftAz": -0.03936796331967028,
+        "scatter": 0.13944493053001958,
+        "call": "1 run",
+        "read": "Straight ball · full · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 0,
+        "ideal": [
+          "straight"
+        ],
+        "good": [
+          "flick"
+        ],
+        "dir": -1.1864621181815802
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -28.77511890953009,
+          "to": -30.4375170710653,
+          "reason": "you felt right at -35 ms raw"
+        },
+        {
+          "id": "shot.flick.az",
+          "from": -1.0821041362364843,
+          "to": -1.0983516408928407,
+          "reason": "aim should be 4° more to the leg side"
+        },
+        {
+          "id": "k.spread",
+          "from": 0.16,
+          "to": 0.152,
+          "reason": "random scatter put it 8° off line"
+        },
+        {
+          "id": "shot.flick.line1",
+          "from": -0.04,
+          "to": -0.015,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:06:40.988Z",
+      "level": "medium",
+      "sample": {
+        "ball": 19,
+        "rawErr": -0.015856468578044968,
+        "err": 0.014581048493020332,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.95,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.767151551239658,
+        "line": "stumps",
+        "type": "straight",
+        "ballZ": -0.04403122155593952,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.8799373998185125,
+        "az": -0.9485855039593503,
+        "aimAz": -1.0983516408928407,
+        "driftAz": 0.08821534338277301,
+        "scatter": 0.06155079355071733,
+        "call": "1 run",
+        "read": "Straight ball · full · stumps"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [],
+        "good": [
+          "flick"
+        ],
+        "dir": -1.2897689984302385
+      },
+      "changes": [
+        {
+          "id": "shot.flick.az",
+          "from": -1.0983516408928407,
+          "to": -1.1682598161228834,
+          "reason": "aim should be 16° more to the leg side"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:07:22.616Z",
+      "level": "medium",
+      "sample": {
+        "ball": 21,
+        "rawErr": -0.03145445642819951,
+        "err": -0.0010169393571342056,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.612671054677339,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.2842021323565858,
+        "line": "stumps",
+        "type": "inswinger",
+        "ballZ": 0.07021994408151436,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.7285426536783886,
+        "az": -1.1362689016141743,
+        "aimAz": -1.1682598161228834,
+        "driftAz": -0.006020644186862045,
+        "scatter": 0.038011558695571046,
+        "call": "1 run",
+        "read": "Inswinger · full · stumps"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [],
+        "good": [
+          "flick"
+        ],
+        "dir": -1.3759060227519526
+      },
+      "changes": [
+        {
+          "id": "shot.flick.az",
+          "from": -1.1682598161228834,
+          "to": -1.2186662067334353,
+          "reason": "aim should be 12° more to the leg side"
+        },
+        {
+          "id": "shot.flick.line1",
+          "from": -0.015,
+          "to": 0.010000000000000002,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:09:29.328Z",
+      "level": "medium",
+      "sample": {
+        "ball": 33,
+        "rawErr": -0.01518873196930932,
+        "err": 0.01524878510175598,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "short",
+        "lenM": 7.8256940196224605,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.2795715145364005,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 6,
+        "q": 0.904003087632863,
+        "az": -1.470643486693802,
+        "aimAz": -1.53588974175501,
+        "driftAz": 0.05139929778227604,
+        "scatter": 0.013846957278931671,
+        "call": "SIX",
+        "read": "Straight ball · short · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 0,
+        "ideal": [
+          "pull"
+        ],
+        "good": [],
+        "dir": -1.683834773029195
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -30.4375170710653,
+          "to": -26.625320795626305,
+          "reason": "you felt right at -15 ms raw"
+        },
+        {
+          "id": "shot.pull.drift",
+          "from": 0.6,
+          "to": 0.51,
+          "reason": "timing felt right but drag pulled it 3° off"
+        },
+        {
+          "id": "shot.pull.az",
+          "from": -1.53588974175501,
+          "to": -1.5837983503522899,
+          "reason": "aim should be 11° more to the leg side"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:27:27.558Z",
+      "level": "medium",
+      "sample": {
+        "ball": 21,
+        "rawErr": 0.0006524745036028748,
+        "err": 0.027277795503602875,
+        "sigma": 0.048,
+        "perfect": 0.025,
+        "miss": 0.135,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.7,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.755252665445733,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.1853883716059177,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.571967613072059,
+        "az": -1.0689263438219998,
+        "aimAz": -1.218666,
+        "driftAz": 0.16503066279679737,
+        "scatter": -0.01529100661879715,
+        "call": "FOUR",
+        "read": "Straight ball · good · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "flick",
+          "glance"
+        ],
+        "good": [],
+        "dir": -1.4278190277554215
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -26.625321,
+          "to": -19.80587212409928,
+          "reason": "you felt right at 1 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1,
+          "to": 1.03,
+          "reason": "called it right, the game said late"
+        },
+        {
+          "id": "shot.flick.drift",
+          "from": 1.1,
+          "to": 0.935,
+          "reason": "timing felt right but drag pulled it 9° off"
+        },
+        {
+          "id": "shot.flick.az",
+          "from": -1.218666,
+          "to": -1.3060232727831749,
+          "reason": "aim should be 20° more to the leg side"
+        },
+        {
+          "id": "shot.flick.len.good",
+          "from": 0.7,
+          "to": 0.7999999999999999,
+          "reason": "you marked flick ideal for a good ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:28:13.332Z",
+      "level": "medium",
+      "sample": {
+        "ball": 24,
+        "rawErr": 0.018224816453613353,
+        "err": 0.038030688577712635,
+        "sigma": 0.049440000000000005,
+        "perfect": 0.025750000000000002,
+        "miss": 0.13905,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.7999999999999999,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.521882939463831,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.24001362144829005,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.47590531798762775,
+        "az": -1.05642802323008,
+        "aimAz": -1.3060232727831749,
+        "driftAz": 0.18998502126771905,
+        "scatter": 0.059610228285375794,
+        "call": "FOUR",
+        "read": "Straight ball · good · pads"
+      },
+      "answers": {
+        "timing": 1,
+        "outcome": null,
+        "ideal": [],
+        "good": [],
+        "dir": -1.7760207619345048
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -19.80587212409928,
+          "to": -17.714199979671122,
+          "reason": "you felt late at 18 ms raw"
+        },
+        {
+          "id": "shot.flick.az",
+          "from": -1.3060232727831749,
+          "to": -1.446023272783175,
+          "reason": "aim should be 38° more to the leg side"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:29:07.274Z",
+      "level": "medium",
+      "sample": {
+        "ball": 29,
+        "rawErr": -0.02248190267715738,
+        "err": -0.004767702697486258,
+        "sigma": 0.049440000000000005,
+        "perfect": 0.025750000000000002,
+        "miss": 0.13905,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "glance",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.838704432603118,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.2672084272817032,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.9907435682436216,
+        "az": -2.474974367884904,
+        "aimAz": -2.443460952792061,
+        "driftAz": -0.032365890312078135,
+        "scatter": 0.0008524752192354177,
+        "call": "1 run",
+        "read": "Straight ball · good · pads"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [
+          "glance"
+        ],
+        "good": [],
+        "dir": null
+      },
+      "changes": []
+    },
+    {
+      "at": "2026-10-31T07:29:29.408Z",
+      "level": "medium",
+      "sample": {
+        "ball": 30,
+        "rawErr": -0.0775232289184747,
+        "err": -0.05980902893880358,
+        "sigma": 0.049440000000000005,
+        "perfect": 0.025750000000000002,
+        "miss": 0.13905,
+        "timing": "EARLY",
+        "kind": "hit",
+        "edge": "inside",
+        "fit": 0.7999999999999999,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.6543063205448565,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.281717011346137,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.1,
+        "az": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "1 run",
+        "read": "Straight ball · good · pads"
+      },
+      "answers": {
+        "timing": -1,
+        "outcome": 0,
+        "ideal": [],
+        "good": [],
+        "dir": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -17.714199979671122,
+          "to": -25.250457214372016,
+          "reason": "you felt early at -78 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:31:04.882Z",
+      "level": "medium",
+      "sample": {
+        "ball": 37,
+        "rawErr": 0.001673049115440313,
+        "err": 0.02692350632981233,
+        "sigma": 0.049440000000000005,
+        "perfect": 0.025750000000000002,
+        "miss": 0.13905,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.95,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.0735835901577957,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.1995680632255042,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.717356104140877,
+        "az": -1.284683569258324,
+        "aimAz": -1.446023272783175,
+        "driftAz": 0.14043204746250362,
+        "scatter": 0.02090765606234726,
+        "call": "FOUR",
+        "read": "Straight ball · full · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 0,
+        "ideal": [
+          "flick"
+        ],
+        "good": [
+          "glance"
+        ],
+        "dir": -1.7041490438659468
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -25.250457214372016,
+          "to": -18.519580631918934,
+          "reason": "you felt right at 2 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.03,
+          "to": 1.0609,
+          "reason": "called it right, the game said late"
+        },
+        {
+          "id": "shot.flick.drift",
+          "from": 0.935,
+          "to": 0.7947500000000001,
+          "reason": "timing felt right but drag pulled it 8° off"
+        },
+        {
+          "id": "shot.flick.az",
+          "from": -1.446023272783175,
+          "to": -1.54039652563965,
+          "reason": "aim should be 22° more to the leg side"
+        },
+        {
+          "id": "shot.flick.len.full",
+          "from": 0.95,
+          "to": 1,
+          "reason": "you marked flick ideal for a full ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:31:48.209Z",
+      "level": "medium",
+      "sample": {
+        "ball": 40,
+        "rawErr": -0.025877354228656328,
+        "err": -0.007357773596737394,
+        "sigma": 0.0509232,
+        "perfect": 0.0265225,
+        "miss": 0.1432215,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "onDrive",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.9080718170516775,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.2570080247117827,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.9793397277704962,
+        "az": -0.631609987927815,
+        "aimAz": -0.5585053606381855,
+        "driftAz": -0.04133492095595685,
+        "scatter": -0.03176970633367273,
+        "call": "FOUR",
+        "read": "Straight ball · full · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 1,
+        "ideal": [],
+        "good": [
+          "onDrive"
+        ],
+        "dir": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -18.519580631918934,
+          "to": -20.35902403110328,
+          "reason": "you felt right at -26 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:32:10.541Z",
+      "level": "medium",
+      "sample": {
+        "ball": 41,
+        "rawErr": -0.04181551882668293,
+        "err": -0.02145649479557965,
+        "sigma": 0.0509232,
+        "perfect": 0.0265225,
+        "miss": 0.1432215,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "onDrive",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.744468767545186,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.19426088318348508,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.8373309414926143,
+        "az": -0.6741098446163049,
+        "aimAz": -0.5585053606381855,
+        "driftAz": -0.11463898647923984,
+        "scatter": -0.0009654974988795339,
+        "call": "FOUR",
+        "read": "Straight ball · full · pads"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": 1,
+        "ideal": [],
+        "good": [],
+        "dir": null
+      },
+      "changes": []
+    },
+    {
+      "at": "2026-10-31T07:32:52.581Z",
+      "level": "medium",
+      "sample": {
+        "ball": 44,
+        "rawErr": -0.004489433458475793,
+        "err": 0.01586959057262749,
+        "sigma": 0.0509232,
+        "perfect": 0.0265225,
+        "miss": 0.1432215,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "onDrive",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.389388510037679,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.2587645041234545,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.9074488516661863,
+        "az": -0.4892925803650342,
+        "aimAz": -0.5585053606381855,
+        "driftAz": 0.08416550714411365,
+        "scatter": -0.014952726870962383,
+        "call": "FOUR",
+        "read": "Straight ball · full · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": 1,
+        "ideal": [],
+        "good": [],
+        "dir": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -20.35902403110328,
+          "to": -16.39162638794641,
+          "reason": "you felt right at -4 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T07:33:15.113Z",
+      "level": "medium",
+      "sample": {
+        "ball": 45,
+        "rawErr": 0.017053213348452813,
+        "err": 0.03344483973639922,
+        "sigma": 0.0509232,
+        "perfect": 0.0265225,
+        "miss": 0.1432215,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "onDrive",
+        "lofted": false,
+        "length": "full",
+        "lenM": 2.665619786825846,
+        "line": "pads",
+        "type": "straight",
+        "ballZ": -0.2198933160065257,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.6496333953260537,
+        "az": -0.4378049339922534,
+        "aimAz": -0.5585053606381855,
+        "driftAz": 0.18920223622305846,
+        "scatter": -0.06850180957712637,
+        "call": "1 run",
+        "read": "Straight ball · full · pads"
+      },
+      "answers": {
+        "timing": 1,
+        "outcome": 0,
+        "ideal": [],
+        "good": [],
+        "dir": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -16.39162638794641,
+          "to": -15.668896453846603,
+          "reason": "you felt late at 17 ms raw"
+        }
+      ]
+    }
+  ]
+}

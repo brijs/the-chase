@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chase Outcome Model</title>
+<style>
+:root{
+  --bg:#f6f3ec; --panel:#fffdf8; --ink:#1f1d1a; --muted:#6b655b; --line:#e2dccf;
+  --accent:#7a2e2a; --amber:#c98a1b; --green:#2f7a4a; --blue:#2c5d8a; --red:#b23a32; --grey:#9a948a;
+  --code:#f0ebe0; --heat0:#f3eee4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16151a; --panel:#1f1e24; --ink:#ece8df; --muted:#a39d92; --line:#34323a;
+    --accent:#e0857c; --amber:#e8b250; --green:#6cc28a; --blue:#79a9d6; --red:#ee7a70; --grey:#7d786f;
+    --code:#29272e; --heat0:#26252b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16151a; --panel:#1f1e24; --ink:#ece8df; --muted:#a39d92; --line:#34323a;
+  --accent:#e0857c; --amber:#e8b250; --green:#6cc28a; --blue:#79a9d6; --red:#ee7a70; --grey:#7d786f;
+  --code:#29272e; --heat0:#26252b;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px 80px}
+header h1{font-size:30px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+header p{color:var(--muted);margin:0;max-width:720px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px}
+nav a{font-size:13px;color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--panel);padding:4px 10px;border-radius:99px}
+nav a:hover{border-color:var(--accent)}
+section{margin-top:42px}
+h2{font-size:21px;margin:0 0 4px;letter-spacing:-.005em}
+h2 small{font-weight:500;color:var(--muted);font-size:13px;margin-left:8px}
+h3{font-size:15px;margin:22px 0 6px}
+p.lead{color:var(--muted);margin:0 0 14px;max-width:780px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:12.5px;line-height:1.5;margin:8px 0}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.wrap{white-space:normal}
+.note{font-size:13px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.cal{border-color:var(--amber);color:var(--amber)}
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.step{flex:1 1 150px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative}
+.step b{display:block;font-size:13px}
+.step span{font-size:12px;color:var(--muted)}
+.step i{font-style:normal;font-size:11px;color:var(--accent);font-family:ui-monospace,Menlo,monospace}
+/* calculator */
+.calc{display:grid;grid-template-columns:320px 1fr;gap:18px}
+@media (max-width:820px){.calc{grid-template-columns:1fr}}
+.ctl{display:grid;gap:10px}
+.ctl label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.ctl label .v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.ctl .row{display:flex;justify-content:space-between}
+select,input[type=range]{width:100%}
+select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;background:var(--panel);color:var(--ink);border:0;padding:6px;font-size:12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.bar{display:flex;height:34px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:6px 0}
+.bar div{display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:600;min-width:0;overflow:hidden;white-space:nowrap;transition:flex-basis .15s}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:10px}
+.kv div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.kv small{display:block;color:var(--muted);font-size:11px}
+.kv b{font-size:16px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+/* heatmap */
+.heat td.c{text-align:center;font-variant-numeric:tabular-nums;min-width:52px}
+svg text{fill:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif}
+.tl svg{width:100%;height:auto;display:block}
+.fieldwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}
+@media (max-width:760px){.fieldwrap{grid-template-columns:1fr}}
+.fieldwrap svg{width:100%;height:auto;max-height:640px}
+.formula{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--code);padding:10px 12px;border-radius:8px;overflow-x:auto;white-space:pre;line-height:1.6}
+.callout{border-left:3px solid var(--amber);padding:8px 12px;background:var(--panel);border-radius:0 8px 8px 0;font-size:13.5px;margin:12px 0}
+footer{margin-top:50px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>How the Chase decides a ball</h1>
+  <p>The outcome model behind <code>?mode=game</code> in <em>The Short Ball</em>, explained from the source in <code>src/game/</code>. It covers timing, shot fit, miss and edge odds, power, direction, ball types, fielding and runs. Every number here uses the baked <code>calibration.json</code> (exported 31 Oct 2026). Values the calibration changed are marked <span class="pill cal">cal</span>.</p>
+  <nav>
+    <a href="#pipeline">One ball</a><a href="#bowling">Ball types</a><a href="#timing">Timing</a><a href="#fit">Fit</a><a href="#odds">Probabilities</a><a href="#calc">Calculator</a><a href="#power">Power &amp; direction</a><a href="#edges">Edges</a><a href="#fielding">Fielding &amp; runs</a><a href="#laws">Laws</a><a href="#sim">Simulated results</a><a href="#calibration">Calibration</a>
+  </nav>
+</header>
+
+<!-- ===================================================== PIPELINE -->
+<section id="pipeline">
+  <h2>One ball, end to end</h2>
+  <p class="lead">The game decides each ball once, at the moment you press, and then animates the result. The result can't change mid-animation, and a replay redraws exactly the same ball.</p>
+  <div class="pipe">
+    <div class="step"><i>bowlerAI.js</i><b>1. Over plan &amp; field</b><span>From the required rate, wickets left and the over number</span></div>
+    <div class="step"><i>bowlerAI.js</i><b>2. Delivery spec</b><span>Type, pace, length, line, swing and seam, aimed and then scattered</span></div>
+    <div class="step"><i>delivery.js</i><b>3. Ball path</b><span>Solved in closed form at release: when it reaches the bat and how high</span></div>
+    <div class="step"><i>batting.js</i><b>4. Your press</b><span>Timing error, plus how well the shot fits this ball</span></div>
+    <div class="step"><i>batting.js</i><b>5. Miss → edge → clean</b><span>Three rolls in order: beaten? edged? Otherwise a clean hit with quality q</span></div>
+    <div class="step"><i>ballSim.js</i><b>6. Flight</b><span>Speed, direction and launch angle, integrated at 240 Hz</span></div>
+    <div class="step"><i>fielding.js</i><b>7. Field &amp; runs</b><span>Who reaches it first, then a catch roll, the throw time and the runs</span></div>
+  </div>
+  <p class="note" style="margin-top:10px">With no press it's a <b>leave</b>, and only the laws check runs (bowled, LBW, pad, or safe). A miss in step 5 goes to the same check.</p>
+</section>
+
+<!-- ===================================================== BOWLING -->
+<section id="bowling">
+  <h2>Ball types, lengths and lines</h2>
+  <p class="lead">The bowler AI picks a weighted plan for each over, then a type, a length and a line for each ball. It aims at a random point inside the zone and then misses by up to ±0.35 m of length (±0.55 m for yorkers) and ±6 cm of line. About 3.5% of balls stray: a wide outside off, or one down the leg side.</p>
+  <div class="grid2">
+    <div class="card tbl"><h3 style="margin-top:0">Delivery types</h3><table id="tblTypes"></table>
+      <p class="note">Swing and seam are in metres. Positive moves away from the right-hander (toward off). Total movement = swing + seam, which feeds the miss and edge odds.</p></div>
+    <div class="card tbl"><h3 style="margin-top:0">Lengths (where it pitches)</h3><table id="tblLen"></table>
+      <h3>Lines (where it arrives at the stumps)</h3><table id="tblLine"></table>
+      <p class="note">The length label comes from where the ball actually pitched, not where it was aimed. Height at the stumps rises from the full end of a band to the short end, plus ±12 cm of pitch variation (±17 cm for cutters).</p></div>
+  </div>
+  <h3>How the AI adapts</h3>
+  <div class="tbl card"><table>
+    <tr><th>Plan</th><th>Field</th><th>Main types</th><th>When</th></tr>
+    <tr><td>New ball: full &amp; swinging</td><td>attack</td><td class="wrap">outswinger 4, inswinger 2.2</td><td class="wrap">Most likely in over 1</td></tr>
+    <tr><td>Outside off, make him reach</td><td>balanced</td><td class="wrap">outswinger 2.5, leg-cutter 2</td><td class="wrap">Default in the middle overs</td></tr>
+    <tr><td>Short-ball barrage</td><td>balanced</td><td class="wrap">bouncer 3</td><td class="wrap">Weight ×0.3 once you've made 8+ runs off short balls</td></tr>
+    <tr><td>Attack the stumps</td><td>attack</td><td class="wrap">inswinger 3, straight 2.2, off-cutter 2</td><td class="wrap">+1.5 weight when the required rate is under 7</td></tr>
+    <tr><td>Death</td><td>death</td><td class="wrap">yorker 3.4, slower 2.2</td><td class="wrap">Most likely in the last over; +2.5 weight when the rate is over 13</td></tr>
+  </table>
+  <ul class="note" style="margin:10px 0 0;padding-left:18px">
+    <li>After a 4 or a 6, the next ball gets +1.6 bouncer and +1.0 slower ball. A bouncer straight after a bouncer is ×0.4.</li>
+    <li>A new batter (fewer than 2 balls faced) gets +2.5 outswinger and ×0.5 bouncer.</li>
+    <li><b>It remembers where you score.</b> A length that has gone for many runs per ball is weighted down to ×0.35. A length:line cell where you scored is weighted down too, and one where you got out is weighted up (+0.6 per wicket).</li>
+    <li>The field follows the plan, but the captain switches attack to balanced when the required rate is over 12, and death to balanced when it is under 6.</li>
+  </ul></div>
+  <h3>The read (NEXT BALL card and pitch ring) by difficulty</h3>
+  <div class="tbl card"><table id="tblDiff"></table>
+  <p class="note">The card shows the bowler's <em>aim</em>, not the ball. The ring is offset by up to the zone error. A disguised ball is shown as a different type (a slower ball as an outswinger, an off-cutter as an inswinger, and so on).</p></div>
+</section>
+
+<!-- ===================================================== TIMING -->
+<section id="timing">
+  <h2>Timing</h2>
+  <p class="lead">Each shot has a <b>swing time</b>: the time from your key press until the bat meets the ball. Contact is when the ball crosses the bat's plane, which is closer to the bowler for front-foot shots and deeper for back-foot ones.</p>
+  <div class="formula">err  = (press − offset) + swing − contactTime − bias        seconds; &lt; 0 early, &gt; 0 late
+tq   = exp(−(err / σ)²)                                   timing quality, 1 = perfect, falls off as a Gaussian</div>
+  <div class="callout"><b>Your offset is −48.6 ms</b> <span class="pill cal">cal</span>. In the nets you tended to press about 49 ms early, so every press is now counted as if it came 48.6 ms later. The window is also ×1.093 wider than the code default.</div>
+
+  <h3>Timing bands (calibrated)</h3>
+  <div class="card tl">
+    <div class="seg" id="tlDiff" style="max-width:300px;margin-bottom:10px"></div>
+    <svg id="tlSvg" viewBox="0 0 900 150" role="img" aria-label="Timing bands"></svg>
+    <div class="legend"><span><i style="background:var(--green)"></i>PERFECT (|err| ≤ perfect)</span><span><i style="background:var(--amber)"></i>EARLY / LATE (≤ 1.25σ)</span><span><i style="background:var(--red)"></i>VERY EARLY / VERY LATE</span><span><i style="background:var(--grey)"></i>beyond miss: always beaten</span><span>— tq curve</span></div>
+  </div>
+  <div class="tbl card" style="margin-top:12px"><table id="tblWin"></table>
+  <p class="note">The specials scale all three numbers by their window factor: sweep ×0.7, reverse sweep ×0.6, scoop ×0.55. The labels are only the HUD call. What actually matters is the continuous <code>tq</code>.</p></div>
+
+  <h3>How long you have: release to contact</h3>
+  <div class="tbl card"><table id="tblFlight"></table>
+  <p class="note">Pace is the real speed × the difficulty's pace factor (Easy 0.62, Medium 0.72, Hard 0.84). Back-foot contact is about 18 ms later than front-foot. Your press lands at <code>contact − swing</code>, so on Medium a good-length ball means pressing about 0.50 s after release for a 0.13 s drive.</p></div>
+
+  <h3>What being early or late does</h3>
+  <ul style="margin:6px 0;padding-left:18px">
+    <li><b>Direction drag:</b> early pulls the ball to the leg side and late pushes it to the off side, by <code>err × 5.5 rad/s × shot drift × (ball speed / 28)</code>. 40 ms early on a Medium cover drive is about −12°.</li>
+    <li><b>Uppish:</b> more than 0.8σ early on a front-foot ground shot launches at 11–20° instead of along the ground.</li>
+    <li><b>Edges:</b> late (err &gt; 10 ms) tends to find the outside edge.</li>
+    <li><b>Power:</b> q = tq × (0.3 + 0.7·fit) scales the speed off the bat (see <a href="#power">Power</a>).</li>
+  </ul>
+</section>
+
+<!-- ===================================================== FIT -->
+<section id="fit">
+  <h2>Shot fit</h2>
+  <p class="lead">Fit (0–1) measures how well this ball suits the shot you chose. It multiplies the shot's length suitability by its line band, using where the ball <em>actually</em> arrives at the bat, then applies height penalties.</p>
+  <div class="formula">fit = len[length] × bandFit(z at bat, line band)
+bandFit = 1 inside the band, then fades linearly to 0 over 0.24 m outside it
+× 0.35  front-foot shot with the ball above 1.15 m
+× 0.30  sweep / reverse / scoop with the ball above 0.9 m
+× 0.40  pull with the ball below 0.55 m</div>
+  <h3>Length suitability (calibrated)</h3>
+  <div class="tbl card heat"><table id="tblHeat"></table>
+  <p class="note">The line band is in metres at the bat. + is off side; 0 is middle stump; the stumps span ±0.18 m. The → key plays a <b>flick</b> if the ball pitched within 6 m of the stumps and a <b>pull</b> if it pitched further away.</p></div>
+</section>
+
+<!-- ===================================================== ODDS -->
+<section id="odds">
+  <h2>Probabilities: miss, edge, clean</h2>
+  <p class="lead">Before any dice roll, two hard checks: <b>|err| &gt; miss window</b> means beaten. A ball arriving more than 1.7 m high means beaten by the bounce (unless you played a pull). After that, two rolls in sequence:</p>
+  <div class="formula">move   = |swing + seam|                 metres
+missP  = max(0, (1−fit)² × 0.736 × (1 − 0.4·tq) + move × 0.25 − 0.05)
+         if fit &lt; 0.10  →  missP ≥ 0.85             the wrong shape entirely
+         specials       →  missP += (1 − tq) × 0.35
+edgeP  = (0.02 + (1−fit) × 0.429 + move × 0.35) × (0.35 + 0.65·(1−tq)) + (1−tq) × 0.268
+         × 0.55 defence,  + 0.05 lofted,  × 1.6 specials,  capped at 0.85
+clean  = (1 − missP) × (1 − edgeP)</div>
+  <p class="note">The calibrated coefficients are missCoef 0.736 (default 0.8), edgeFit 0.429 (0.4) and edgeTiming 0.268 (0.25).</p>
+  <h3>Grid: a regular ground shot, no movement vs. 25 cm movement</h3>
+  <div class="tbl card"><table id="tblGrid"></table>
+  <p class="note">Each cell shows miss / edge / clean %, then the quality q of a clean hit. The timing columns are |err| in multiples of σ (σ = 52 ms on Medium). A miss isn't necessarily out: the laws decide that (bowled, LBW or nothing).</p></div>
+</section>
+
+<!-- ===================================================== CALC -->
+<section id="calc">
+  <h2>Try a ball</h2>
+  <p class="lead">This uses the same formulas and calibrated numbers as the game. Pick the shot, where the ball arrives and how well you timed it.</p>
+  <div class="card calc">
+    <div class="ctl">
+      <label>Shot<select id="cShot"></select></label>
+      <label>Difficulty<div class="seg" id="cDiff"></div></label>
+      <label>Length<select id="cLen"></select></label>
+      <label><div class="row"><span>Line at the bat (m, + = off)</span><span class="v" id="cLineV"></span></div><input type="range" id="cLine" min="-0.6" max="0.9" step="0.01" value="0.25"></label>
+      <label><div class="row"><span>Height at the bat (m)</span><span class="v" id="cHV"></span></div><input type="range" id="cH" min="0.05" max="2" step="0.01" value="0.45"></label>
+      <label><div class="row"><span>Movement |swing+seam| (m)</span><span class="v" id="cMovV"></span></div><input type="range" id="cMov" min="0" max="0.5" step="0.01" value="0.05"></label>
+      <label><div class="row"><span>Timing error (ms, − early)</span><span class="v" id="cErrV"></span></div><input type="range" id="cErr" min="-200" max="200" step="1" value="0"></label>
+      <label><div class="row"><span>Bowler speed (km/h)</span><span class="v" id="cKphV"></span></div><input type="range" id="cKph" min="100" max="152" step="1" value="138"></label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="cLoft"> Lofted (A)</label>
+    </div>
+    <div>
+      <div class="legend"><span><i style="background:var(--red)"></i>Beaten</span><span><i style="background:var(--amber)"></i>Edge</span><span><i style="background:var(--green)"></i>Clean</span></div>
+      <div class="bar" id="cBar"><div style="background:var(--red)"></div><div style="background:var(--amber)"></div><div style="background:var(--green)"></div></div>
+      <div class="kv" id="cKV"></div>
+      <p class="note" id="cNote" style="margin-top:12px"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== POWER -->
+<section id="power">
+  <h2>Power, speed and direction</h2>
+  <p class="lead">A clean hit leaves the bat with a quality <code>q = tq × (0.3 + 0.7·fit)</code>. Speed, launch angle and scatter all depend on q.</p>
+  <div class="formula">ground speed = power × (9 + 15·q) + paceUse × ballSpeed × q          m/s
+lofted speed = power × (7 + 11.5·q)       × 0.82 if q ≤ 0.55
+direction    = aim + err·5.5·drift·(ballSpeed/28) + scatter
+scatter      = triangular(±1) × 0.202 rad × (0.8 + 0.9·(1−q)) × (ballSpeed/28)     <span class="pill cal">cal</span> 0.16→0.202</div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card tbl"><h3 style="margin-top:0">Launch angle</h3><table>
+      <tr><th>Case</th><th>Elevation</th></tr>
+      <tr><td>Ground shot</td><td>−3° … +1°</td></tr>
+      <tr><td>Early front-foot (&gt;0.8σ)</td><td>+11° … +20° (uppish)</td></tr>
+      <tr><td>Pull (ground)</td><td>−7° … −2° (rolled down)</td></tr>
+      <tr><td>Defence</td><td>−4° … 0°</td></tr>
+      <tr><td>Late cut</td><td>−5° … −1°</td></tr>
+      <tr><td>Lofted, q &gt; 0.55</td><td>26° … 38°</td></tr>
+      <tr><td>Lofted, 0.3 ≤ q ≤ 0.55</td><td>16° … 30° (flat, to a fielder)</td></tr>
+      <tr><td>Lofted, q &lt; 0.3</td><td>48° … 68° (skied)</td></tr>
+      <tr><td>Scoop</td><td>30° … 46°, always airborne</td></tr>
+    </table><p class="note">Plus each shot's calibrated launch offset (cover drive −2° <span class="pill cal">cal</span>).</p></div>
+    <div class="card tbl"><h3 style="margin-top:0">Quality labels</h3><table>
+      <tr><th>q</th><th>Call</th></tr>
+      <tr><td>&gt; 0.82</td><td>Middled</td></tr><tr><td>0.55 – 0.82</td><td>Well hit</td></tr><tr><td>0.30 – 0.55</td><td>Mistimed</td></tr><tr><td>&lt; 0.30</td><td>Off the inside half</td></tr>
+    </table>
+    <h3>After the bat</h3>
+    <p class="note" style="margin:0">The ball flies under gravity with light air drag. Each bounce on the outfield keeps 36% of its vertical speed. A skidding ball keeps its pace and a steep one loses up to 45%. Rolling friction is 2.6 + 0.14·v m/s². Crossing the rope in the air is a 6; along the ground it's a 4. The rope is about 30 m straight, 20 m square and 14 m fine.</p></div>
+  </div>
+  <h3>Shot aims and the field</h3>
+  <div class="card fieldwrap">
+    <svg id="fieldSvg" viewBox="-240 -180 480 520" role="img" aria-label="Field map with shot aims"></svg>
+    <div>
+      <div class="seg" id="fPreset" style="margin-bottom:10px"></div>
+      <p class="note">The batter is at the top, the off side on the left and the bowler below: the same view as the nets feedback map. Solid lines are each shot's calibrated aim. The faint wedge is the ±1σ scatter on a Medium 138 km/h ball at q = 1. Dots are the fielders in the chosen preset.</p>
+      <div class="tbl"><table id="tblShotsPow"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== EDGES -->
+<section id="edges">
+  <h2>Edges</h2>
+  <p class="lead">When the edge roll hits, the kind of edge is picked by rules (not randomly), then launched within that kind's range. Edged balls have q = 0.1.</p>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">Which edge</h3>
+    <ol style="margin:0;padding-left:18px;font-size:13.5px">
+      <li><b>Specials:</b> 60% top edge, otherwise outside if late, inside if early.</li>
+      <li><b>Short ball</b> (short or bouncer) with a pull, a front-foot shot or a lofted shot: <b>top edge</b>.</li>
+      <li><b>Early (&gt;1σ)</b> straight, cover or on drive to a ball seaming in (seam &lt; −4 cm): <b>leading edge</b>.</li>
+      <li><b>Late</b> (err &gt; 10 ms) <em>or</em> a ball moving away and arriving outside off: <b>outside edge</b>.</li>
+      <li>Otherwise an <b>inside edge</b>. If the ball was hitting the stumps, there's a 50% chance it's <b>played on</b> (bowled).</li>
+    </ol></div>
+    <div class="card tbl"><h3 style="margin-top:0">Where edges go (calibrated)</h3><table id="tblEdges"></table>
+    <p class="note">Directions are degrees from straight toward the off side, so 180° is straight at the keeper. The outside edge's speed is a share of the ball's pace. A top edge goes to either side of the wicket.</p></div>
+  </div>
+</section>
+
+<!-- ===================================================== FIELDING -->
+<section id="fielding">
+  <h2>Fielding, catches and runs</h2>
+  <p class="lead">Each fielder (and the keeper) scans the ball's path for the earliest point they can reach at each level of effort, starting from where they actually are at contact. Every fielder takes their easiest option that isn't much later than their earliest. The fielder who gets there first, after a small cost for harder efforts, plays the ball.</p>
+  <div class="grid2">
+    <div class="card tbl"><table>
+      <tr><th>Effort</th><th>Reach</th><th class="n">Catch held</th><th class="n">Gather time</th></tr>
+      <tr><td>Set (waiting)</td><td>0.85 m catch / 0.6 m ground</td><td class="n">98%</td><td class="n">0.40 s</td></tr>
+      <tr><td>Run</td><td>same, on the move</td><td class="n">95%</td><td class="n">0.45 s</td></tr>
+      <tr><td>Stretch (lunge)</td><td>1.3 m, ball &lt; 2 m high</td><td class="n">80%</td><td class="n">—</td></tr>
+      <tr><td>Slide</td><td>2.2 m, ground ball &gt; 3 m/s</td><td class="n">—</td><td class="n">0.85 s</td></tr>
+      <tr><td>Dive</td><td>2.4 m</td><td class="n">60%</td><td class="n">1.00 s</td></tr>
+    </table>
+    <p class="note">Catch chance = skill × effort. Skill is Easy 0.85 / Medium 0.92 / Hard 0.96, ×0.93 for the slips and +0.05 for the keeper. ×0.85 more if the ball is faster than 20 m/s, and ×0.85 more if it's above 2 m. A catchable ball is in the air between 0.12 m and 2.45 m.</p></div>
+    <div class="card"><h3 style="margin-top:0">Runs</h3>
+    <div class="formula" style="white-space:pre-wrap">fielder time = 0.32 s reaction + distance / speed (+0.3 s to accelerate)
+throw arrives = gather + 0.38 s + distance to keeper / 21 m/s + 0.12 s
+runs = floor((throw arrives − 0.2 − 0.25) / 1.95 s), max 3</div>
+    <p class="note">Fielder speed is Easy 5.0 / Medium 5.6 / Hard 6.1 m/s, and the keeper runs at 75% of that. A defensive shot with q &lt; 0.5 never runs. A drop goes to ground at the fielder's feet with 0.9 s to gather. There are no run-outs or byes: the batters only run what's safe.</p></div>
+  </div>
+</section>
+
+<!-- ===================================================== LAWS -->
+<section id="laws">
+  <h2>When the bat misses (or you leave)</h2>
+  <div class="card tbl"><table>
+    <tr><th>Check</th><th>Result</th></tr>
+    <tr><td class="wrap">The ball hits the pad zone for your footwork (below 0.62 m; 0.55 m on one knee)</td><td class="wrap"><b>LBW</b> if it was going on to hit the stumps, the impact is in line, and it didn't pitch outside leg. Otherwise "Hit on the pad" or "Pitched outside leg".</td></tr>
+    <tr><td class="wrap">It misses the pads and hits the stumps</td><td><b>Bowled</b></td></tr>
+    <tr><td class="wrap">Wide: arrives beyond 0.9 m off, 0.72 m leg, or above 2.25 m</td><td class="wrap">+1 extra, not a legal ball, never out. A swing at a wide that arrives beyond 0.85 m off is beaten.</td></tr>
+    <tr><td>Otherwise</td><td>Safe ("Left alone", "Played and missed")</td></tr>
+  </table>
+  <p class="note">A leave uses the stance pad zone. A missed shot uses that shot's footwork, which is why a missed sweep to a straight ball is usually LBW.</p></div>
+</section>
+
+<!-- ===================================================== SIM -->
+<section id="sim">
+  <h2>What actually happens: simulated</h2>
+  <p class="lead">Each row is 400 balls of a delivery that suits the shot, bowled at 138 km/h on Medium. The field and plan vary with the match seed. "Late" means exactly 1σ late (+52 ms). These numbers come from running <code>createMatch → resolve</code> with the calibration applied.</p>
+  <div class="seg" id="simMode" style="max-width:420px;margin-bottom:10px"></div>
+  <div class="tbl card"><table id="tblSim"></table></div>
+  <h3>The wrong shot, perfectly timed</h3>
+  <div class="tbl card"><table id="tblWrong"></table></div>
+  <div class="callout">What stands out in this calibration:
+    <ul style="margin:6px 0 0;padding-left:18px">
+      <li>Perfectly timed drives to their ideal ball are almost always 4s (straight 98%, cover 92%). Lofted, they're 6s about 86% of the time.</li>
+      <li>A perfect square cut to a chest-high ball is caught about 14% of the time. The flat slap starts above 1 m, so it's catchable in the air before it bounces, and point is right there.</li>
+      <li>A perfect forward defence still gets a single every time: only a defence with q &lt; 0.5 is blocked from running.</li>
+      <li>One sigma late is costly with the specials: sweep 47% out, scoop 51% out.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================================================== CALIBRATION -->
+<section id="calibration">
+  <h2>Your calibration vs. the code defaults</h2>
+  <p class="lead">Values come in layers: code defaults ← the baked <code>calibration.json</code> ← the browser's saved calibration ← live edits (T panel, or nets feedback with F). The baked file changes these 37 values:</p>
+  <div class="tbl card"><table id="tblCal"></table></div>
+</section>
+
+<footer>Generated from <code>short-ball/src/game/*.js</code> and <code>calibration.json</code>. If the model changes, these numbers go stale: rerun the simulation and regenerate the page.</footer>
+</div>
+
+<script>
+const D2R = Math.PI/180;
+const DATA = {
+  diff: {
+    easy:{label:'Easy',perfect:0.03278,sigma:0.06556,miss:0.17484,pace:0.62,fielderSpeed:5.0,catchSkill:0.85,target:[34,44],preview:{len:0.35,hide:0.25,disguise:0}},
+    medium:{label:'Medium',perfect:0.02732,sigma:0.05245,miss:0.14752,pace:0.72,fielderSpeed:5.6,catchSkill:0.92,target:[48,58],preview:{len:0.8,hide:0.55,disguise:0.15}},
+    hard:{label:'Hard',perfect:0.02185,sigma:0.04152,miss:0.12020,pace:0.84,fielderSpeed:6.1,catchSkill:0.96,target:[56,66],preview:{len:1.3,hide:0.85,disguise:0.3}}
+  },
+  K:{missCoef:0.736,missTimingRelief:0.4,missMove:0.25,missFloor:0.05,wrongShotFit:0.1,wrongShotMiss:0.85,edgeBase:0.02,edgeFit:0.429235,edgeMove:0.35,edgeTiming:0.268272,defenceEdge:0.55,loftEdge:0.05,drift:5.5,groundBase:9,groundQ:15,loftBase:7,loftQ:11.5,spread:0.202312,specialMiss:0.35,specialEdge:1.6},
+  shots:{"straight":{"name":"Straight drive","key":"↓","az":0,"elev":0,"foot":"front","swing":0.13,"power":1.103,"window":1,"drift":1,"paceUse":0,"len":{"yorker":0.55,"full":1,"good":0.61,"short":0.1,"bouncer":0},"line":[-0.14,0.2]},"cover":{"name":"Cover drive","key":"↓←","az":40,"elev":-2,"foot":"front","swing":0.13,"power":1.05,"window":1,"drift":1,"paceUse":0,"len":{"yorker":0.48,"full":1,"good":0.65,"short":0.12,"bouncer":0},"line":[0.1,0.6]},"onDrive":{"name":"On drive","key":"↓→","az":-32,"elev":0,"foot":"front","swing":0.13,"power":0.95,"window":1,"drift":1,"paceUse":0,"len":{"yorker":0.5,"full":1,"good":0.55,"short":0.1,"bouncer":0},"line":[-0.32,0.08]},"cut":{"name":"Square cut","key":"←","az":88,"elev":0,"foot":"back","swing":0.12,"power":1.08,"window":1,"drift":0.6,"paceUse":0,"len":{"yorker":0,"full":0.12,"good":0.55,"short":1,"bouncer":0.5},"line":[0.24,0.8]},"lateCut":{"name":"Late cut","key":"↑←","az":154.4,"elev":0,"foot":"back","swing":0.09,"power":0.42,"window":1,"drift":0.8,"paceUse":0.32,"bias":0.035,"len":{"yorker":0,"full":0.1,"good":0.7,"short":0.95,"bouncer":0.3},"line":[0.14,0.75]},"punch":{"name":"Back-foot punch","key":"↑","az":18,"elev":0,"foot":"back","swing":0.11,"power":0.62,"window":1,"drift":1,"paceUse":0,"len":{"yorker":0.05,"full":0.3,"good":0.9,"short":0.9,"bouncer":0.15},"line":[-0.17,0.36]},"glance":{"name":"Leg glance","key":"↑→","az":-140,"elev":0,"foot":"front","swing":0.1,"power":0.578,"window":1,"drift":1.2,"paceUse":0.15,"bias":0.02,"len":{"yorker":0.35,"full":0.95,"good":1,"short":0.55,"bouncer":0.1},"line":[-0.42,-0.02]},"pull":{"name":"Pull","key":"→ (short)","az":-90.7,"elev":0,"foot":"back","swing":0.12,"power":1.117,"window":1,"drift":0.56,"paceUse":0,"len":{"yorker":0,"full":0.04,"good":0.41,"short":1,"bouncer":1},"line":[-0.45,0.36]},"flick":{"name":"Flick","key":"→ (full)","az":-96.4,"elev":0,"foot":"front","swing":0.1,"power":0.81,"window":1,"drift":0.83,"paceUse":0.18,"len":{"yorker":0.4,"full":1,"good":0.8,"short":0.2,"bouncer":0},"line":[-0.42,0.01]},"defence":{"name":"Defence","key":"D alone","az":6,"elev":0,"foot":"auto","swing":0.1,"power":0.22,"window":1,"drift":1,"paceUse":0,"len":{"yorker":0.85,"full":0.95,"good":1,"short":0.85,"bouncer":0.3},"line":[-0.4,0.5]},"sweep":{"name":"Sweep","key":"S","az":-100,"elev":0,"foot":"sweep","swing":0.15,"power":0.85,"window":0.7,"drift":1.4,"paceUse":0,"len":{"yorker":0.2,"full":0.9,"good":0.85,"short":0.12,"bouncer":0},"line":[-0.42,0.14],"special":true},"reverseSweep":{"name":"Reverse sweep","key":"S+←","az":112,"elev":0,"foot":"sweep","swing":0.15,"power":0.8,"window":0.6,"drift":1.4,"paceUse":0,"len":{"yorker":0.1,"full":0.85,"good":0.85,"short":0.1,"bouncer":0},"line":[-0.06,0.6],"special":true},"scoop":{"name":"Scoop","key":"S+↑","az":177,"elev":0,"foot":"sweep","swing":0.13,"power":0.5,"window":0.55,"drift":1.6,"paceUse":0.45,"len":{"yorker":0.6,"full":0.9,"good":0.61,"short":0.1,"bouncer":0},"line":[-0.185,0.2],"special":true}},
+  defaultsLen:{straight:{good:0.55},cover:{yorker:0.3},glance:{full:0.85,good:0.9,short:0.45},pull:{good:0.35,bouncer:0.9},flick:{full:0.95,good:0.7},scoop:{good:0.55}},
+  types:[["Outswinger","132–146","+0.16…+0.32","0…+0.04","any"],["Inswinger","130–144","−0.30…−0.15","−0.04…0","any"],["Off-cutter","122–134","−0.04…+0.03","−0.20…−0.10","any"],["Leg-cutter","122–134","−0.03…+0.04","+0.10…+0.20","any"],["Bouncer","140–151","±0.05","±0.03","bouncer"],["Yorker","138–149","−0.14…+0.04","0","yorker"],["Slower ball","104–117","±0.04","±0.06","any, fuller; 5 cm lower"],["Straight ball","134–145","±0.03","±0.02","any, mostly at the stumps"]],
+  lengths:[["Yorker","0.6–1.4","< 1.8","0.06–0.22"],["Full","2.2–3.8","1.8–4.1","0.28–0.60"],["Good","4.4–6.4","4.1–6.7","0.48–0.98"],["Short","7.0–8.8","6.7–9.1","0.95–1.35"],["Bouncer","9.4–11.0","> 9.1","1.42–2.00"]],
+  lines:[["Wide outside off","+0.38…+0.60","> +0.34"],["Off stump","+0.12…+0.30","+0.11…+0.34"],["On the stumps","−0.10…+0.10","−0.12…+0.11"],["On the pads","−0.34…−0.14","< −0.12"]],
+  flight:{"easy":{"yorker 145":[0.684,0.701,25],"full 140":[0.713,0.733,24.1],"good 140":[0.725,0.745,24.1],"short 140":[0.737,0.757,24.1],"bouncer 148":[0.706,0.725,25.5],"slower 110":[0.914,0.939,18.9]},"medium":{"yorker 145":[0.589,0.604,29],"full 140":[0.614,0.632,28],"good 140":[0.624,0.641,28],"short 140":[0.634,0.652,28],"bouncer 148":[0.608,0.624,29.6],"slower 110":[0.787,0.809,22]},"hard":{"yorker 145":[0.505,0.518,33.8],"full 140":[0.527,0.541,32.7],"good 140":[0.535,0.55,32.7],"short 140":[0.544,0.559,32.7],"bouncer 148":[0.521,0.535,34.5],"slower 110":[0.675,0.693,25.7]}},
+  edges:[["Outside edge","155° ± 17°","0.50 ± 0.11 × pace","12.5° ± 4.5°",true],["Inside edge","−156° ± 21°","0.32 ± 0.10 × pace","−1.5° ± 4.5°",true],["Top edge","±(97° ± 63°)","11 ± 3 m/s","64° ± 9°",false],["Leading edge","62.5° ± 27.5°","9.5 ± 2.5 m/s","27° ± 9°",false]],
+  mc:{"straight":{"perfect":{"beaten":0,"out":0.003,"edge":0.003,"dot":0.005,"r1":0.013,"r2":0,"r3":0,"four":0.978,"six":0,"speed":26.5},"late":{"beaten":0,"out":0.092,"edge":0.08,"dot":0,"r1":0.818,"r2":0,"r3":0,"four":0.01,"six":0,"speed":16},"lofted":{"beaten":0,"out":0.037,"edge":0.025,"dot":0,"r1":0,"r2":0,"r3":0,"four":0.083,"six":0.855,"speed":20.4}},"cover":{"perfect":{"beaten":0,"out":0.005,"edge":0.01,"dot":0.055,"r1":0.015,"r2":0,"r3":0,"four":0.915,"six":0,"speed":25.2},"late":{"beaten":0,"out":0.092,"edge":0.098,"dot":0.163,"r1":0.63,"r2":0,"r3":0,"four":0.018,"six":0,"speed":15.2},"lofted":{"beaten":0,"out":0.037,"edge":0.035,"dot":0,"r1":0,"r2":0,"r3":0,"four":0.068,"six":0.86,"speed":19.4}},"onDrive":{"perfect":{"beaten":0,"out":0.007,"edge":0.007,"dot":0.015,"r1":0.13,"r2":0,"r3":0,"four":0.84,"six":0,"speed":22.8},"late":{"beaten":0,"out":0.1,"edge":0.09,"dot":0,"r1":0.81,"r2":0,"r3":0,"four":0,"six":0,"speed":13.8},"lofted":{"beaten":0,"out":0.043,"edge":0.03,"dot":0,"r1":0,"r2":0,"r3":0,"four":0.915,"six":0.013,"speed":17.6}},"cut":{"perfect":{"beaten":0,"out":0.14,"edge":0.003,"dot":0.427,"r1":0,"r2":0,"r3":0,"four":0.43,"six":0,"speed":25.9},"late":{"beaten":0,"out":0.145,"edge":0.045,"dot":0.708,"r1":0.08,"r2":0,"r3":0,"four":0.022,"six":0,"speed":15.7},"lofted":{"beaten":0,"out":0.052,"edge":0.02,"dot":0,"r1":0,"r2":0,"r3":0,"four":0,"six":0.927,"speed":20}},"lateCut":{"perfect":{"beaten":0,"out":0.02,"edge":0.007,"dot":0.52,"r1":0.06,"r2":0,"r3":0,"four":0.393,"six":0,"speed":18.4},"late":{"beaten":0,"out":0.145,"edge":0.055,"dot":0.797,"r1":0.003,"r2":0,"r3":0,"four":0,"six":0,"speed":9.2},"lofted":{"beaten":0,"out":0.74,"edge":0.02,"dot":0.177,"r1":0.063,"r2":0,"r3":0,"four":0,"six":0,"speed":7.6}},"punch":{"perfect":{"beaten":0,"out":0,"edge":0.03,"dot":0,"r1":0.97,"r2":0,"r3":0,"four":0,"six":0,"speed":14.2},"late":{"beaten":0,"out":0.147,"edge":0.058,"dot":0,"r1":0.795,"r2":0,"r3":0,"four":0,"six":0,"speed":8.8},"lofted":{"beaten":0,"out":0.772,"edge":0.083,"dot":0.09,"r1":0.055,"r2":0,"r3":0,"four":0,"six":0,"speed":11}},"glance":{"perfect":{"beaten":0,"out":0,"edge":0.015,"dot":0.41,"r1":0.307,"r2":0,"r3":0,"four":0.268,"six":0,"speed":18},"late":{"beaten":0,"out":0.12,"edge":0.07,"dot":0,"r1":0.81,"r2":0,"r3":0,"four":0,"six":0,"speed":9.9},"lofted":{"beaten":0,"out":0.445,"edge":0.072,"dot":0.043,"r1":0.44,"r2":0,"r3":0,"four":0,"six":0,"speed":10.7}},"pull":{"perfect":{"beaten":0,"out":0.005,"edge":0,"dot":0.445,"r1":0,"r2":0,"r3":0,"four":0.55,"six":0,"speed":26.8},"late":{"beaten":0,"out":0.125,"edge":0.048,"dot":0.16,"r1":0.273,"r2":0,"r3":0,"four":0.395,"six":0,"speed":16.2},"lofted":{"beaten":0,"out":0.05,"edge":0.013,"dot":0,"r1":0,"r2":0,"r3":0,"four":0,"six":0.938,"speed":20.7}},"flick":{"perfect":{"beaten":0,"out":0,"edge":0.015,"dot":0.813,"r1":0.063,"r2":0,"r3":0,"four":0.11,"six":0,"speed":24.4},"late":{"beaten":0,"out":0.11,"edge":0.08,"dot":0,"r1":0.685,"r2":0.063,"r3":0,"four":0.063,"six":0,"speed":13.6},"lofted":{"beaten":0,"out":0.723,"edge":0.072,"dot":0.113,"r1":0.092,"r2":0,"r3":0,"four":0,"six":0,"speed":15}},"defence":{"perfect":{"beaten":0,"out":0,"edge":0,"dot":0,"r1":1,"r2":0,"r3":0,"four":0,"six":0,"speed":5.3},"late":{"beaten":0,"out":0.068,"edge":0.035,"dot":0,"r1":0.897,"r2":0,"r3":0,"four":0,"six":0,"speed":3.2},"lofted":null},"sweep":{"perfect":{"beaten":0,"out":0.025,"edge":0.022,"dot":0.927,"r1":0.025,"r2":0,"r3":0,"four":0,"six":0,"speed":19.5},"late":{"beaten":0,"out":0.465,"edge":0.155,"dot":0,"r1":0.38,"r2":0,"r3":0,"four":0,"six":0,"speed":9.2},"lofted":null},"reverseSweep":{"perfect":{"beaten":0,"out":0.02,"edge":0.033,"dot":0.077,"r1":0.122,"r2":0,"r3":0,"four":0.748,"six":0,"speed":17.9},"late":{"beaten":0.318,"out":0.188,"edge":0.165,"dot":0,"r1":0.33,"r2":0,"r3":0,"four":0,"six":0,"speed":7.9},"lofted":null},"scoop":{"perfect":{"beaten":0,"out":0.028,"edge":0.02,"dot":0,"r1":0,"r2":0,"r3":0,"four":0,"six":0.953,"speed":23},"late":{"beaten":0,"out":0.505,"edge":0.152,"dot":0.175,"r1":0.168,"r2":0,"r3":0,"four":0,"six":0,"speed":5.2},"lofted":null}},
+  mcBall:{straight:"full, on the stumps",cover:"full, off stump",onDrive:"full, middle/leg",cut:"short, wide outside off",lateCut:"short, outside off",punch:"good/short, on the stumps",glance:"good, on the pads",pull:"short, on the stumps, 1.3 m",flick:"full, on the pads",defence:"good, on the stumps",sweep:"full, leg stump",reverseSweep:"full, off stump",scoop:"full, straight"},
+  wrong:{"Pull to a yorker":{"beaten":0,"out":0.843,"edge":0.01,"dot":0.003,"r1":0.135,"r2":0,"r3":0,"four":0.01,"six":0,"speed":15.1},"Cover drive to a bouncer":{"beaten":0.825,"out":0.018,"edge":0.01,"dot":0,"r1":0.147,"r2":0,"r3":0,"four":0,"six":0,"speed":14.2},"Cut to a full ball on the stumps":{"beaten":0,"out":0.843,"edge":0.01,"dot":0.128,"r1":0.015,"r2":0,"r3":0,"four":0.005,"six":0,"speed":14.6},"Straight drive to a good length":{"beaten":0,"out":0.06,"edge":0.03,"dot":0.07,"r1":0.217,"r2":0,"r3":0,"four":0.623,"six":0,"speed":21.9}},
+  cal:{"timing.offsetMs":[0,-48.5981,"ms"],"timing.windowScale":[1,1.0927,"×"],"shot.lateCut.az":[2.7576,2.6954,"rad"],"shot.pull.az":[-1.5359,-1.5838,"rad"],"shot.flick.az":[-1.0821,-1.6821,"rad"],"shot.cover.elev":[0,-0.0349,"rad"],"shot.pull.drift":[0.6,0.5623,"×"],"shot.flick.drift":[1.1,0.8345,"×"],"shot.straight.len.good":[0.55,0.61,""],"shot.straight.power":[1,1.1025,"×"],"shot.cover.len.yorker":[0.3,0.48,""],"shot.cover.power":[1,1.05,"×"],"shot.punch.line0":[-0.12,-0.17,"m"],"shot.glance.len.full":[0.85,0.95,""],"shot.glance.len.good":[0.9,1,""],"shot.glance.len.short":[0.45,0.55,""],"shot.glance.power":[0.55,0.5775,"×"],"shot.pull.len.good":[0.35,0.41,""],"shot.pull.len.bouncer":[0.9,1,""],"shot.pull.power":[1.12,1.1172,"×"],"shot.flick.len.full":[0.95,1,""],"shot.flick.len.good":[0.7,0.8,""],"shot.flick.line1":[-0.04,0.01,"m"],"shot.flick.power":[0.7,0.8103,"×"],"shot.scoop.len.good":[0.55,0.61,""],"shot.scoop.line0":[-0.16,-0.185,"m"],"edge.outside.az":[2.7466,2.7071,"rad"],"edge.outside.azHalf":[0.275,0.3025,"rad"],"edge.outside.speed":[0.43,0.4965,"×pace"],"edge.outside.elev":[0.1134,0.2182,"rad"],"edge.inside.az":[-2.6916,-2.7166,"rad"],"edge.inside.azHalf":[0.3,0.363,"rad"],"edge.inside.speed":[0.3,0.315,"×pace"],"k.missCoef":[0.8,0.736,""],"k.edgeFit":[0.4,0.4292,""],"k.edgeTiming":[0.25,0.2683,""],"k.spread":[0.16,0.2023,""]},
+  presets:{
+    attack:[['1st slip',166,8.5],['2nd slip',158,8.7],['Gully',132,9.6],['Point',92,12.5],['Cover',52,13.5],['Mid-off',16,14.5],['Mid-on',-16,14.5],['Square leg',-96,12.5],['Fine leg',-150,'deep']],
+    balanced:[['1st slip',166,8.5],['Third man',140,'deep'],['Point',96,13.0],['Cover',50,14.0],['Mid-off',14,15.0],['Mid-on',-14,15.0],['Midwicket',-56,14.0],['Square leg',-100,13.0],['Fine leg',-152,'deep']],
+    death:[['Short third',145,11.0],['Deep point',98,'deep'],['Deep cover',46,'deep'],['Long-off',12,'deep'],['Long-on',-12,'deep'],['Deep midwicket',-52,'deep'],['Deep square',-98,'deep'],['Fine leg',-152,'deep'],['Cover',60,13.0]]
+  }
+};
+const LEN_KEYS=['yorker','full','good','short','bouncer'];
+const ORDER=['straight','cover','onDrive','cut','lateCut','punch','glance','pull','flick','defence','sweep','reverseSweep','scoop'];
+const $=id=>document.getElementById(id);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pct=x=>x==null?'—':(x*100<0.5&&x>0?'<1':Math.round(x*100))+'%';
+const tr=(cells,head)=>'<tr>'+cells.map(c=>{const n=typeof c==='object'&&c&&c.n;const v=typeof c==='object'&&c?c.v:c;return head?`<th${n?' class="n"':''}>${v}</th>`:`<td${n?' class="n"':''}>${v}</td>`}).join('')+'</tr>';
+function seg(el,opts,val,on){el.innerHTML=opts.map(([k,l])=>`<button data-k="${k}" class="${k===val?'on':''}">${l}</button>`).join('');el.onclick=e=>{const b=e.target.closest('button');if(!b)return;[...el.children].forEach(c=>c.classList.toggle('on',c===b));on(b.dataset.k)};}
+
+// ---- static tables
+$('tblTypes').innerHTML=tr(['Type','km/h','Swing (m)','Seam (m)','Length'],1)+DATA.types.map(r=>tr(r)).join('');
+$('tblLen').innerHTML=tr(['Length','Aimed (m)','Counts as (m)','Height at stumps'],1)+DATA.lengths.map(r=>tr(r)).join('');
+$('tblLine').innerHTML=tr(['Line','Aimed (m)','Counts as'],1)+DATA.lines.map(r=>tr(r)).join('');
+$('tblDiff').innerHTML=tr(['','Target','Pace ×','Zone error','Hidden before release','Disguised','Fielder m/s','Catch skill'],1)+Object.values(DATA.diff).map(d=>tr([d.label,`${d.target[0]}–${d.target[1]}`,{v:d.pace,n:1},`±${d.preview.len} m`,`${d.preview.hide} s`,pct(d.preview.disguise),{v:d.fielderSpeed,n:1},{v:d.catchSkill,n:1}])).join('');
+$('tblWin').innerHTML=tr(['',{v:'Perfect ±',n:1},{v:'σ',n:1},{v:'Early/late to ±',n:1},{v:'Miss beyond ±',n:1}],1)+Object.values(DATA.diff).map(d=>tr([d.label,{v:Math.round(d.perfect*1000)+' ms',n:1},{v:Math.round(d.sigma*1000)+' ms',n:1},{v:Math.round(d.sigma*1250)+' ms',n:1},{v:Math.round(d.miss*1000)+' ms',n:1}])).join('');
+(function(){const labs=Object.keys(DATA.flight.medium);let h=tr(['Ball'].concat(['easy','medium','hard'].map(k=>({v:DATA.diff[k].label+' (front / back)',n:1}))),1);
+for(const l of labs)h+=tr([l+' km/h'].concat(['easy','medium','hard'].map(k=>{const f=DATA.flight[k][l];return {v:`${f[0].toFixed(3)} / ${f[1].toFixed(3)} s <span class="note">(${f[2]} m/s)</span>`,n:1}})));
+$('tblFlight').innerHTML=h+`<tr><td colspan="4" class="wrap note">Swing time (s): ${ORDER.map(k=>`${DATA.shots[k].name} ${DATA.shots[k].swing}`).join(' · ')}. Late cut and glance also have a built-in late bias of 35 and 20 ms: you play them that much later.</td></tr>`;})();
+
+// heatmap
+(function(){const ac=css('--accent');let h=tr(['Shot','Keys'].concat(LEN_KEYS).concat(['Line band (m)','Foot']),1);
+for(const k of ORDER){const s=DATA.shots[k];h+='<tr><td>'+s.name+(s.special?' <span class="pill">special</span>':'')+'</td><td class="mono">'+s.key+'</td>'+LEN_KEYS.map(L=>{const v=s.len[L];const cal=DATA.defaultsLen[k]&&DATA.defaultsLen[k][L]!=null;return `<td class="c" style="background:color-mix(in srgb, ${ac} ${Math.round(v*78)}%, var(--heat0));color:${v>0.55?'#fff':'var(--ink)'}" title="${cal?'calibrated from '+DATA.defaultsLen[k][L]:''}">${v.toFixed(2)}${cal?' •':''}</td>`}).join('')+`<td class="mono">${s.line[0].toFixed(2)} … ${s.line[1].toFixed(2)}</td><td>${s.foot}</td></tr>`;}
+$('tblHeat').innerHTML=h+'<tr><td colspan="9" class="note">• = changed by calibration (hover for the default)</td></tr>';})();
+
+// grid
+(function(){const fits=[1,0.8,0.6,0.4,0.2,0.05],zs=[0,0.5,1,1.5,2];let h=tr(['Fit','Move'].concat(zs.map(z=>({v:z+'σ',n:1}))),1);
+for(const f of fits)for(const mv of [0,0.25]){h+=tr([mv?'':f.toFixed(2),mv+' m'].concat(zs.map(z=>{const r=odds(f,Math.exp(-z*z),mv,{});return {v:`<span style="color:var(--red)">${pct(r.miss)}</span> / <span style="color:var(--amber)">${pct(r.edge)}</span> / <b style="color:var(--green)">${pct(r.clean)}</b> <span class="note">q ${r.q.toFixed(2)}</span>`,n:1}})));}
+$('tblGrid').innerHTML=h;})();
+
+function odds(fit,tq,move,{special,defence,lofted}){const K=DATA.K;
+  let missP=Math.max(0,(1-fit)**2*K.missCoef*(1-K.missTimingRelief*tq)+move*K.missMove-K.missFloor);
+  if(fit<K.wrongShotFit)missP=Math.max(missP,K.wrongShotMiss);
+  if(special)missP+=(1-tq)*K.specialMiss;missP=Math.min(1,missP);
+  let edgeP=(K.edgeBase+(1-fit)*K.edgeFit+move*K.edgeMove)*(0.35+0.65*(1-tq))+(1-tq)*K.edgeTiming;
+  if(defence)edgeP*=K.defenceEdge;if(lofted)edgeP+=K.loftEdge;if(special)edgeP*=K.specialEdge;edgeP=Math.min(0.85,edgeP);
+  return {miss:missP,edge:(1-missP)*edgeP,clean:(1-missP)*(1-edgeP),q:tq*(0.3+0.7*fit)};}
+
+// timing svg
+let tlD='medium';
+function drawTL(){const d=DATA.diff[tlD],W=900,H=150,R=220,x=v=>W/2+v/R*1000*(W/2-20)/1,bx=ms=>W/2+ms/R*(W/2-20);
+  const g=css('--grey'),r=css('--red'),a=css('--amber'),gr=css('--green'),ink=css('--ink'),mu=css('--muted');
+  const P=d.perfect*1000,S=d.sigma*1250,M=d.miss*1000;let s='';
+  s+=`<rect x="20" y="40" width="${W-40}" height="40" fill="${g}" opacity=".35"/>`;
+  s+=`<rect x="${bx(-M)}" y="40" width="${bx(M)-bx(-M)}" height="40" fill="${r}" opacity=".75"/>`;
+  s+=`<rect x="${bx(-S)}" y="40" width="${bx(S)-bx(-S)}" height="40" fill="${a}"/>`;
+  s+=`<rect x="${bx(-P)}" y="40" width="${bx(P)-bx(-P)}" height="40" fill="${gr}"/>`;
+  let path='';for(let ms=-R;ms<=R;ms+=2){const tq=Math.exp(-((ms/1000/d.sigma)**2));path+=(ms===-R?'M':'L')+bx(ms).toFixed(1)+','+(36-tq*30).toFixed(1);}
+  s+=`<path d="${path}" fill="none" stroke="${ink}" stroke-width="1.6"/>`;
+  for(const ms of [-200,-150,-100,-50,0,50,100,150,200]){s+=`<line x1="${bx(ms)}" x2="${bx(ms)}" y1="80" y2="86" stroke="${mu}"/><text x="${bx(ms)}" y="100" font-size="12" text-anchor="middle" fill="${mu}">${ms>0?'+':''}${ms}</text>`;}
+  s+=`<text x="${bx(-M)}" y="122" font-size="12" text-anchor="middle">−${Math.round(M)}</text><text x="${bx(M)}" y="122" font-size="12" text-anchor="middle">+${Math.round(M)}</text>`;
+  s+=`<text x="${bx(-P)}" y="122" font-size="12" text-anchor="end">±${Math.round(P)} ms</text><text x="${bx(S)}" y="122" font-size="12" text-anchor="start">±${Math.round(S)}</text>`;
+  s+=`<text x="24" y="140" font-size="12" fill="${mu}">← EARLY (ball dragged to leg, drives pop up)</text><text x="${W-24}" y="140" font-size="12" text-anchor="end" fill="${mu}">LATE (ball goes finer, outside edge) →</text>`;
+  s+=`<text x="${W/2}" y="16" font-size="12" text-anchor="middle" fill="${mu}">timing quality tq: 1.0 at 0 ms, 0.37 at ±σ (${Math.round(d.sigma*1000)} ms)</text>`;
+  $('tlSvg').innerHTML=s;}
+seg($('tlDiff'),[['easy','Easy'],['medium','Medium'],['hard','Hard']],tlD,k=>{tlD=k;drawTL();});
+
+// calculator
+const C={diff:'medium'};
+$('cShot').innerHTML=ORDER.map(k=>`<option value="${k}">${DATA.shots[k].name} (${DATA.shots[k].key})</option>`).join('');$('cShot').value='cover';
+$('cLen').innerHTML=LEN_KEYS.map(k=>`<option>${k}</option>`).join('');$('cLen').value='full';
+seg($('cDiff'),[['easy','Easy'],['medium','Medium'],['hard','Hard']],'medium',k=>{C.diff=k;calc();});
+function bandFit(z,[a,b],soft=0.24){if(z>=a&&z<=b)return 1;const d=z<a?a-z:z-b;return Math.max(0,1-d/soft);}
+function calc(){const k=$('cShot').value,s=DATA.shots[k],L=$('cLen').value,z=+$('cLine').value,h=+$('cH').value,mv=+$('cMov').value,errMs=+$('cErr').value,kph=+$('cKph').value;
+  const lofted=$('cLoft').checked&&k!=='defence'&&!s.special;const d=DATA.diff[C.diff],K=DATA.K;
+  $('cLineV').textContent=z.toFixed(2);$('cHV').textContent=h.toFixed(2);$('cMovV').textContent=mv.toFixed(2);$('cErrV').textContent=(errMs>0?'+':'')+errMs;$('cKphV').textContent=kph;
+  const wm=s.window||1,w={perfect:d.perfect*wm,sigma:d.sigma*wm,miss:d.miss*wm},err=errMs/1000;
+  let fit=s.len[L]*bandFit(z,s.line);const notes=[];
+  if(s.foot==='front'&&h>1.15){fit*=0.35;notes.push('front-foot shot to a ball above 1.15 m: fit ×0.35');}
+  if(s.special&&h>0.9){fit*=0.3;notes.push('special shot to a ball above 0.9 m: fit ×0.3');}
+  if(k==='pull'&&h<0.55){fit*=0.4;notes.push('pull to a ball below 0.55 m: fit ×0.4');}
+  if(k==='pull'&&(L==='yorker'||L==='full'||L==='good'))notes.push('In the game, → to a ball pitching within 6 m plays a flick instead.');
+  const tq=Math.exp(-((err/w.sigma)**2));const a=Math.abs(err);
+  const label=a<=w.perfect?'PERFECT':a<=w.sigma*1.25?(err<0?'EARLY':'LATE'):(err<0?'VERY EARLY':'VERY LATE');
+  let r;
+  if(a>w.miss){r={miss:1,edge:0,clean:0,q:0};notes.unshift(`Outside the ±${Math.round(w.miss*1000)} ms miss window: always beaten.`);}
+  else if(h>1.7&&k!=='pull'){r={miss:1,edge:0,clean:0,q:0};notes.unshift('Ball above 1.7 m: beaten by the bounce.');}
+  else r=odds(fit,tq,mv,{special:s.special,defence:k==='defence',lofted});
+  if(fit<K.wrongShotFit&&r.clean<1&&a<=w.miss)notes.push('Fit under 0.10: the wrong shape entirely, at least 85% miss.');
+  const bs=kph/3.6*d.pace,paceF=bs/28,q=r.q;
+  let spd=s.power*(K.groundBase+K.groundQ*q)+(s.paceUse||0)*bs*q;
+  if(lofted){spd=s.power*(K.loftBase+K.loftQ*q);if(q<=0.55)spd*=0.82;}
+  const drift=err*K.drift*(s.drift||1)*paceF/D2R,sc=K.spread*(0.8+0.9*(1-q))*paceF/D2R;
+  let elev=lofted?(q>0.55?'26–38°':q<0.3?'48–68° (skied)':'16–30° (flat)'):k==='scoop'?'30–46°':k==='pull'?'−7 … −2°':(err<-w.sigma*0.8&&s.foot==='front')?'11–20° (uppish)':'−3 … +1°';
+  const quality=q>0.82?'Middled':q>0.55?'Well hit':q>0.3?'Mistimed':'Off the inside half';
+  const bar=$('cBar').children;[r.miss,r.edge,r.clean].forEach((v,i)=>{bar[i].style.flex=`0 0 ${v*100}%`;bar[i].textContent=v>0.08?pct(v):'';});
+  const box=(l,v)=>`<div><small>${l}</small><b>${v}</b></div>`;
+  $('cKV').innerHTML=box('Fit',fit.toFixed(2))+box('Timing call',label)+box('tq',tq.toFixed(2))+box('σ for this shot',Math.round(w.sigma*1000)+' ms')+box('Beaten',pct(r.miss))+box('Edge',pct(r.edge))+box('Clean',pct(r.clean))+box('Clean q',r.clean?q.toFixed(2)+' · '+quality:'—')+box('Speed off bat',r.clean?spd.toFixed(1)+' m/s':'—')+box('Launch',r.clean?elev:'—')+box('Direction',r.clean?`${(s.az+drift).toFixed(0)}° ± ${sc.toFixed(0)}°`:'—')+box('Ball speed (game)',bs.toFixed(1)+' m/s');
+  $('cNote').innerHTML=(notes.length?notes.join(' '):'')+` Aim ${s.az}°, so timing drags it ${drift>=0?'+':''}${drift.toFixed(1)}°. Direction is degrees from straight; + is off side.`;}
+['cShot','cLen','cLine','cH','cMov','cErr','cKph','cLoft'].forEach(id=>$(id).addEventListener('input',calc));
+
+// field map
+const OVAL={cx:1.0,rope:[23.2,21.2]},STR={x:-7.75,z:-0.32};
+function rayToEllipse(x0,z0,az,ab){const dx=Math.cos(az),dz=Math.sin(az),px=(x0-OVAL.cx)/ab[0],pz=z0/ab[1],qx=dx/ab[0],qz=dz/ab[1],A=qx*qx+qz*qz,B=2*(px*qx+pz*qz),Cc=px*px+pz*pz-1;return(-B+Math.sqrt(B*B-4*A*Cc))/(2*A);}
+const S=10,scr=(x,z)=>[-(z-STR.z)*S,(x-STR.x)*S];
+let preset='balanced';
+function drawField(){const ink=css('--ink'),mu=css('--muted'),ac=css('--accent'),bl=css('--blue'),gr=css('--green'),am=css('--amber'),line=css('--line'),panel=css('--panel');
+  const [ecx,ecy]=scr(OVAL.cx,0);let s=`<ellipse cx="${ecx}" cy="${ecy}" rx="${OVAL.rope[1]*S}" ry="${OVAL.rope[0]*S}" fill="${gr}" fill-opacity=".08" stroke="${gr}" stroke-width="1.5"/>`;
+  const [p1x,p1y]=scr(-9,0),[p2x,p2y]=scr(11.12,0);s+=`<rect x="${p1x-15}" y="${p1y}" width="30" height="${p2y-p1y}" fill="${am}" fill-opacity=".18"/>`;
+  s+=`<text x="-215" y="80" font-size="13" fill="${mu}">OFF</text><text x="215" y="80" font-size="13" fill="${mu}" text-anchor="end">LEG</text>`;
+  const paceF=(138/3.6*0.72)/28,sc=DATA.K.spread*0.8*paceF*0.41;
+  for(const k of ORDER){if(k==='defence')continue;const sh=DATA.shots[k],az=sh.az*D2R,len=rayToEllipse(STR.x,STR.z,az,OVAL.rope)-2.2;
+    const pt=a=>scr(STR.x+Math.cos(a)*len,STR.z+Math.sin(a)*len);const [x,y]=pt(az),[xa,ya]=pt(az-sc),[xb,yb]=pt(az+sc);const col=sh.special?am:ac;
+    s+=`<path d="M0,0 L${xa},${ya} L${xb},${yb} Z" fill="${col}" fill-opacity=".12"/>`;
+    s+=`<line x1="0" y1="0" x2="${x}" y2="${y}" stroke="${col}" stroke-width="1.6"${sh.special?' stroke-dasharray="4 3"':''}/>`;
+    const [lx,ly]=scr(STR.x+Math.cos(az)*(len+1.4),STR.z+Math.sin(az)*(len+1.4));
+    s+=`<text x="${lx}" y="${ly+4}" font-size="11" text-anchor="middle" fill="${col}" paint-order="stroke" stroke="${panel}" stroke-width="3">${sh.name.replace(' drive','').replace('Back-foot ','').replace('Reverse sweep','Rev sweep')}</text>`;}
+  for(const [name,azD,dd] of DATA.presets[preset]){const az=azD*D2R,maxD=rayToEllipse(STR.x,STR.z,az,OVAL.rope)-1.6,dist=dd==='deep'?maxD:Math.min(dd,maxD);const [x,y]=scr(STR.x+Math.cos(az)*dist,STR.z+Math.sin(az)*dist);
+    s+=`<circle cx="${x}" cy="${y}" r="5" fill="${bl}"/><text x="${x}" y="${y-8}" font-size="10" text-anchor="middle" fill="${bl}" paint-order="stroke" stroke="${panel}" stroke-width="3">${name}</text>`;}
+  const [kx,ky]=scr(-16.2,0.55);s+=`<circle cx="${kx}" cy="${ky}" r="5" fill="${bl}"/><text x="${kx}" y="${ky-8}" font-size="10" text-anchor="middle" fill="${bl}">keeper</text>`;
+  s+=`<circle cx="0" cy="0" r="6" fill="${ink}"/><text x="10" y="-6" font-size="11">batter</text>`;
+  const [bx,by]=scr(9.7,0.45);s+=`<circle cx="${bx}" cy="${by}" r="5" fill="${mu}"/><text x="${bx+9}" y="${by+4}" font-size="11" fill="${mu}">bowler</text>`;
+  $('fieldSvg').innerHTML=s;}
+seg($('fPreset'),[['attack','Attack'],['balanced','Balanced'],['death','Death']],preset,k=>{preset=k;drawField();});
+$('tblShotsPow').innerHTML=tr(['Shot',{v:'Aim',n:1},{v:'Power',n:1},{v:'Drift',n:1}],1)+ORDER.map(k=>{const s=DATA.shots[k];return tr([s.name,{v:s.az+'°',n:1},{v:s.power+'×',n:1},{v:s.drift,n:1}])}).join('');
+
+// edges
+$('tblEdges').innerHTML=tr(['Kind','Direction','Speed','Launch'],1)+DATA.edges.map(r=>tr([r[0]+(r[4]?' <span class="pill cal">cal</span>':''),r[1],r[2],r[3]])).join('');
+
+// sim
+function simRows(mode){const cols=['Beaten','Out','Edge (safe)','Dot','1','2','4','6','Clean m/s'];let h=tr(['Shot','Ball'].concat(cols.map(c=>({v:c,n:1}))),1);
+  for(const k of ORDER){const r=DATA.mc[k][mode];if(!r){h+=tr([DATA.shots[k].name,DATA.mcBall[k],{v:'— (no lofted version)',n:0}]);continue;}
+    h+=tr([DATA.shots[k].name,DATA.mcBall[k]].concat([r.beaten,r.out,r.edge,r.dot,r.r1,r.r2,r.four,r.six].map(v=>({v:`<span style="${v>=0.4?'font-weight:700':''};color:${v===r.out&&v>0.1?'var(--red)':'inherit'}">${pct(v)}</span>`,n:1}))).concat([{v:r.speed??'—',n:1}]));}
+  $('tblSim').innerHTML=h;}
+seg($('simMode'),[['perfect','Perfect timing'],['late','1σ late (+52 ms)'],['lofted','Lofted, perfect']],'perfect',simRows);
+$('tblWrong').innerHTML=tr(['Mistake',{v:'Beaten',n:1},{v:'Out',n:1},{v:'Edge',n:1},{v:'Dot',n:1},{v:'1',n:1},{v:'4',n:1}],1)+Object.entries(DATA.wrong).map(([k,r])=>tr([k].concat([r.beaten,r.out,r.edge,r.dot,r.r1,r.four].map(v=>({v:pct(v),n:1}))))).join('')+'<tr><td colspan="7" class="note wrap">The straight drive to a good length is a "half fit" (0.61), not a wrong shot, and it still goes for 4 most of the time when perfectly timed. The cut to a full straight ball is out 84% of the time because a miss on the stumps is bowled or LBW.</td></tr>';
+
+// calibration diff
+(function(){let h=tr(['Value',{v:'Default',n:1},{v:'Calibrated',n:1},{v:'Change',n:1}],1);
+  for(const [id,[a,b,u]] of Object.entries(DATA.cal)){const deg=u==='rad';const f=v=>deg?(v/D2R).toFixed(1)+'°':(Math.abs(v)<10?(+v.toFixed(3)):v.toFixed(1))+(u&&u!=='×pace'?(' '+u):'');const ch=deg?((b-a)/D2R>=0?'+':'')+((b-a)/D2R).toFixed(1)+'°':(a!==0?((b/a-1)*100>=0?'+':'')+((b/a-1)*100).toFixed(0)+'%':(b>0?'+':'')+b.toFixed(1));
+    h+=tr([`<span class="mono">${id}</span>`,{v:f(a),n:1},{v:'<b>'+f(b)+'</b>',n:1},{v:ch,n:1}]);}
+  $('tblCal').innerHTML=h+'<tr><td colspan="4" class="note wrap">The biggest moves: the flick\'s aim swung 34° squarer (−62° → −96°, almost exactly square leg), the timing offset is −48.6 ms, scatter is +26%, and the outside edge flies higher (6.5° → 12.5°) and faster.</td></tr>';})();
+
+function drawAll(){drawTL();drawField();calc();}
+drawAll();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawAll);
+</script>
+</body>
+</html>

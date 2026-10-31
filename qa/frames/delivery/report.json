@@ -1,0 +1,34 @@
+{
+ "base": "http://127.0.0.1:4180/index.html",
+ "from": 2.55,
+ "to": 3.6,
+ "fps": 24,
+ "view": "portrait",
+ "report": [
+  {
+   "entity": "bowler",
+   "frames": 25,
+   "size": [
+    5.91,
+    2.05,
+    1.78
+   ],
+   "center": [
+    9.19,
+    0.99,
+    0.76
+   ],
+   "clip": {
+    "x": 0,
+    "y": 0,
+    "width": 900,
+    "height": 700
+   },
+   "energy": 0.892,
+   "maxStep": 0.075,
+   "empty": 0,
+   "verdict": "ok",
+   "sheet": null
+  }
+ ]
+}

@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "params": {
+    "timing.offsetMs": -25.077107,
+    "timing.windowScale": 1.092727,
+    "shot.lateCut.az": 2.695354,
+    "shot.pull.az": -1.583798,
+    "shot.flick.az": -1.540397,
+    "shot.pull.drift": 0.51,
+    "shot.flick.drift": 0.79475,
+    "shot.straight.len.good": 0.61,
+    "shot.straight.power": 1.05,
+    "shot.punch.line0": -0.17,
+    "shot.glance.len.full": 0.95,
+    "shot.glance.len.good": 1,
+    "shot.glance.len.short": 0.55,
+    "shot.pull.len.good": 0.41,
+    "shot.flick.len.full": 1,
+    "shot.flick.len.good": 0.8,
+    "shot.flick.line1": 0.01,
+    "shot.flick.power": 0.735,
+    "shot.scoop.len.good": 0.61,
+    "shot.scoop.line0": -0.185,
+    "k.missCoef": 0.736,
+    "k.spread": 0.152
+  },
+  "exportedAt": "2026-10-31T09:33:29.898Z",
+  "log": [
+    {
+      "at": "2026-10-31T09:32:57.315Z",
+      "level": "medium",
+      "sample": {
+        "ball": 16,
+        "rawErr": -0.09952820136005491,
+        "err": -0.09926812536005492,
+        "sigma": 0.052450896000000004,
+        "perfect": 0.027318175,
+        "miss": 0.14751814500000002,
+        "timing": "VERY EARLY",
+        "kind": "playedOn",
+        "edge": null,
+        "fit": 0.55,
+        "shotKey": "straight",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.0383825103752315,
+        "line": "stumps",
+        "type": "yorker",
+        "ballZ": 0.003976720351039659,
+        "out": "bowled",
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "PLAYED ON",
+        "read": "Yorker · yorker · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -0.260076,
+          "to": -25.07710734001373,
+          "reason": "you felt right at -100 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-31T09:33:19.881Z",
+      "level": "medium",
+      "sample": {
+        "ball": 17,
+        "rawErr": -0.07555031903189119,
+        "err": -0.05047321169187746,
+        "sigma": 0.052450896000000004,
+        "perfect": 0.027318175,
+        "miss": 0.14751814500000002,
+        "timing": "EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.1946537158573105,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.89091507701669,
+        "line": "off",
+        "type": "legcutter",
+        "ballZ": 0.19160388524280686,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.1728150736053726,
+        "az": -1.7031841374141845,
+        "speed": 8.892226104080589,
+        "spreadHalf": 0.20960615886677234,
+        "driftHalf": 0.20470484176607143,
+        "elev": 0.20077149388767765,
+        "aimAz": -1.540397,
+        "driftAz": -0.19698635487201593,
+        "scatter": 0.034199217457831395,
+        "call": "1 run",
+        "read": "Leg-cutter · good · off"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [],
+        "good": [],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.flick.power",
+          "from": 0.7,
+          "to": 0.735,
+          "reason": "came off too soft"
+        }
+      ]
+    }
+  ]
+}

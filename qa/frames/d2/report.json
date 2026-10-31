@@ -1,0 +1,84 @@
+{
+ "base": "http://127.0.0.1:4180/index.html",
+ "from": 15.3,
+ "to": 19,
+ "fps": 12,
+ "view": "portrait",
+ "report": [
+  {
+   "entity": "batterA",
+   "frames": 44,
+   "size": [
+    1.95,
+    1.78,
+    1.89
+   ],
+   "center": [
+    -8.4,
+    0.85,
+    -0.68
+   ],
+   "clip": {
+    "x": 0,
+    "y": 0,
+    "width": 900,
+    "height": 700
+   },
+   "energy": 4.75,
+   "maxStep": 0.08,
+   "empty": 0,
+   "verdict": "ok",
+   "sheet": null
+  },
+  {
+   "entity": "ball",
+   "frames": 44,
+   "size": [
+    26.82,
+    1.72,
+    1.68
+   ],
+   "center": [
+    -1.95,
+    0.91,
+    -0.35
+   ],
+   "clip": {
+    "x": 0,
+    "y": 0,
+    "width": 900,
+    "height": 700
+   },
+   "energy": 0,
+   "maxStep": 0.114,
+   "empty": 44,
+   "verdict": "NOT-IN-WINDOW",
+   "sheet": null
+  },
+  {
+   "entity": "keeper",
+   "frames": 44,
+   "size": [
+    5.16,
+    1.82,
+    2.29
+   ],
+   "center": [
+    -13.78,
+    0.87,
+    -0.25
+   ],
+   "clip": {
+    "x": 0,
+    "y": 0,
+    "width": 900,
+    "height": 700
+   },
+   "energy": 1.811,
+   "maxStep": 0.131,
+   "empty": 0,
+   "verdict": "ok",
+   "sheet": null
+  }
+ ]
+}
