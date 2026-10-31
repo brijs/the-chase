@@ -276,14 +276,14 @@ export function createCalibration({ ctl, tuning, root, onTune, onExit }) {
     };
   }
 
-  function onOutcome({ o, tCall }) {
+  function onOutcome({ o, tCall, tReveal = tCall }) {
     if (!ctl.nets) return;
     const cur = ctl.cur;
     session.balls++;
     const sample = sampleOf(o, cur);
     drawBar();
     // The result shows first; the ball becomes "the last ball" just after.
-    ctl.at(tCall + 0.6, () => {
+    ctl.at(Math.max(tCall + 0.6, tReveal + 0.4), () => {
       last = sample;
       if (wanted) {
         wanted = false;

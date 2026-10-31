@@ -23,12 +23,16 @@ export const KEEPER_HOME = { x: -16.2, z: 0.55 };
 export const KEEPER_AT_STUMPS = { x: -9.75, z: 0.55 };
 export const STUMPS_X = -9.0;
 
-/** Miniature oval: centre, rope, boards and slab semi-axes (x, z). */
+/**
+ * Miniature oval: centre, rope, boards and slab semi-axes (x, z). Longer than
+ * it is wide and centred toward the keeper, so there is room behind the
+ * batter (the rope is ~18.5 m behind the striker, 32 m in front).
+ */
 export const OVAL = {
-  cx: 1.0,
-  rope: [23.2, 21.2],
-  boards: [24.2, 22.2],
-  slab: [27.6, 23.4],
+  cx: -1.0,
+  rope: [25.2, 21.2],
+  boards: [26.2, 22.2],
+  slab: [29.6, 23.4],
 };
 /** Pavilion gate in the leg-side boards, where batters come and go. */
 export const GATE_PT = { x: -6.0, z: -21.3 };

@@ -24,9 +24,9 @@ import { GAME_FIT_POINTS } from './gameGround.js';
 const TIGHT = { pos: new THREE.Vector3(31, 6.5, 0.6), target: new THREE.Vector3(-4.5, 0.4, 0.1), fov: 16.5 };
 const WIDE = { pos: new THREE.Vector3(35, 8.5, 1.8), target: new THREE.Vector3(6, 1.0, 0.4), fov: 30 };
 const STRIKER = new THREE.Vector3(-7.75, 0, -0.32);
-// The scoreboard (index.js puts it at (-23.4, 8.2), turned 1.73 rad): its face and facing.
+// The scoreboard (index.js puts it at (-27.2, 8.2), turned 1.73 rad): its face and facing.
 const BOARD_N = new THREE.Vector3(Math.sin(1.73), 0, Math.cos(1.73));
-const BOARD = new THREE.Vector3(-23.4, 3.15, 8.2).addScaledVector(BOARD_N, 0.3);
+const BOARD = new THREE.Vector3(-27.2, 3.15, 8.2).addScaledVector(BOARD_N, 0.3);
 
 export function createDirector(camera) {
   const dio = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 20.5 };

@@ -127,7 +127,8 @@ export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
   if (p.y > 1.7 && shot !== SHOTS.pull) return { ...base, kind: 'miss', call: 'Beaten by the bounce' };
 
   const tq = Math.exp(-((err / w.sigma) ** 2));
-  const move = Math.abs(del.movement);
+  // Movement in the air and off the seam, plus any bounce an uneven pitch adds.
+  const move = Math.abs(del.movement) + 1.5 * Math.abs(del.spec?.surprise ?? 0);
   // A poor fit plays and misses as often as it edges; the wrong shape entirely
   // (a pull to a yorker, a drive to a bouncer) almost never meets it.
   let missP = Math.max(0, (1 - fit) ** 2 * K.missCoef * (1 - K.missTimingRelief * tq) + move * K.missMove - K.missFloor);

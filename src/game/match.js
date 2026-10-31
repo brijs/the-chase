@@ -4,6 +4,7 @@ import { SHOTS, resolveShot, lawsCheck, shotFoot } from './batting.js';
 import { simulateBatted } from './ballSim.js';
 import { fieldPositions, resolveFielding } from './fielding.js';
 import { setTarget, planOver, chooseDelivery, newMemory, remember, TYPES } from './bowlerAI.js';
+import { resolveConditions, NEUTRAL } from './conditions.js';
 
 /**
  * The scorebook and one-ball resolution, independent of any rendering. The
@@ -16,7 +17,7 @@ import { setTarget, planOver, chooseDelivery, newMemory, remember, TYPES } from 
  *   const out = m.resolve(ball, input)    input: { shotKey, lofted, pressT } | null (leave)
  *   m.record(out)                         scorebook, strike, result
  */
-export function createMatch({ difficulty = 'medium', seed = 1, nets = false } = {}) {
+export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null } = {}) {
   const diff = DIFFICULTY[difficulty];
   const rng = makeRng(seed);
   const m = {
@@ -39,6 +40,7 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false } = 
     memory: newMemory(),
     strikerIdx: 0, // which of the two batters at the crease is on strike
     nets, // practice: no target, no result
+    cond: conditions ? resolveConditions(conditions) : NEUTRAL, // sky, wind, pitch, outfield
   };
   m.target = setTarget(diff, rng);
 
@@ -107,7 +109,7 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false } = 
     // Off the bat.
     o.kind = 'hit';
     const p0 = del.contactPos(shot.foot);
-    const sim = simulateBatted(p0, shot);
+    const sim = simulateBatted(p0, shot, { wind: m.cond.wind, roll: m.cond.roll });
     o.sim = sim;
     o.contactPos = p0;
     // Where everyone actually is at contact (the controller fills m.live), not just their spots.

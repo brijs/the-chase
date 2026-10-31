@@ -244,6 +244,11 @@ still no imported assets. It covers:
 - **The crowd:** a constant murmur, cheers for fours and sixes, a roar for
   wickets, an "ooh" when you're beaten or edge it, an appeal for LBWs and
   catches behind, applause for runs, new batters, overs and the result.
+  The crowd is made of voices, not noise: dozens of synthesised people
+  chattering in syllables between balls and shouting open vowels when
+  something happens, panned across the stands, with claps and whistles, all
+  in a long stadium reverb. `node qa/crowd-preview.mjs` records it from the
+  game into `qa/game/crowd-preview.wav` (plus a spectrogram).
 
 Each sound is fired from the same game-time events as the visuals, so it stays
 in sync when you pause or fast-forward. Fast-forward drops the small sounds.

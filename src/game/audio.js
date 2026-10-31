@@ -7,7 +7,9 @@
  *   stumps   wood clatter              glove  keeper / catch pop  step    run-up footfall
  *   grunt    the bowler's delivery grunt (formant-filtered saw + breath)
  *   appeal   "howzat" (rising then falling formant shout)
- *   crowd    a murmur bed that never stops; cheer / roar / ooh / applause swell over it
+ *   crowd    many synthesised voices, not noise: a chattering bed that never stops,
+ *            and shouted cheers / roars / oohs (plus claps and whistles) over it,
+ *            all through a big-stand reverb
  *
  * The context starts on the first key or tap (browsers require a gesture).
  * M mutes; the choice is remembered in localStorage when it is available.
@@ -18,8 +20,12 @@ export function createAudio() {
   let bed = null;
   let noiseBuf = null;
   let clapBuf = null;
+  let chatterBuf = null; // the stands talking (a seamless loop)
+  let shoutBuf = null; // the stands shouting (a seamless loop)
+  let stands = null; // crowd bus: dry plus the stadium reverb
   let muted = false;
   let meter = null;
+  let out = null; // the final mix (QA records from here)
   const played = {}; // name -> count (QA)
   try {
     muted = localStorage.getItem('chase-muted') === '1';
@@ -32,14 +38,21 @@ export function createAudio() {
       ctx = new AC();
       master = ctx.createGain();
       master.gain.value = muted ? 0 : 0.9;
-      const comp = ctx.createDynamicsCompressor();
+      const comp = (out = ctx.createDynamicsCompressor());
       master.connect(comp).connect(ctx.destination);
       meter = ctx.createAnalyser();
       meter.fftSize = 1024;
       comp.connect(meter);
       noiseBuf = makeNoise(2.5);
       clapBuf = makeClaps(3.0);
-      startBed();
+      makeStands();
+      // The voices take a few hundred ms to render: a few people per tick, so
+      // the first key press doesn't hitch. The bed fades in when it is ready.
+      crowdBuffer(6, 44, false, (b) => {
+        chatterBuf = b;
+        startBed();
+        crowdBuffer(5, 56, true, (s) => (shoutBuf = s));
+      });
     }
     if (ctx.state === 'suspended') ctx.resume();
   }
@@ -102,7 +115,7 @@ export function createAudio() {
     return o;
   }
   /** A voice: saw through two formants, with a pitch contour [[dt, hz], ...]. */
-  function voice(t, dur, contour, formants, peak, breath = 0.15) {
+  function voice(t, dur, contour, formants, peak, breath = 0.15, dest = master) {
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
     o.frequency.setValueAtTime(contour[0][1], t);
@@ -118,43 +131,233 @@ export function createAudio() {
       fg.gain.value = gain;
       o.connect(f).connect(fg).connect(g);
     }
-    g.connect(master);
+    g.connect(dest);
     o.start(t);
     o.stop(t + dur + 0.1);
     if (breath) noise(t, dur * 0.8, { freq: 1400, Q: 0.8, peak: breath, attack: 0.02 });
   }
 
-  // Crowd bed: two bands of slowly breathing noise, always on under the play.
+  /** A big open stand: dry crowd plus a long, dark, wide reverb tail. */
+  function makeStands() {
+    const sr = ctx.sampleRate;
+    const n = Math.floor(sr * 2.6);
+    const ir = ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      let lp = 0;
+      for (let i = 0; i < n; i++) {
+        // Later reflections are duller: the low-pass closes as the tail decays.
+        const k = 0.5 * Math.exp(-i / (sr * 0.9)) + 0.04;
+        lp += k * (Math.random() * 2 - 1 - lp);
+        d[i] = lp * Math.exp(-i / (sr * 0.55)) * (i < sr * 0.02 ? i / (sr * 0.02) : 1);
+      }
+    }
+    const conv = ctx.createConvolver();
+    conv.buffer = ir;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.55;
+    stands = ctx.createGain();
+    stands.connect(master);
+    stands.connect(conv).connect(wet).connect(master);
+  }
+
+  /**
+   * A crowd as many people: each one a buzzing voice (saw plus breath) through
+   * two vowel formants that glide syllable to syllable, speaking in phrases with
+   * pauses, at some distance and somewhere left-right in the stands. Rendered
+   * once (at a low rate: a crowd has nothing above ~5 kHz) into a stereo loop.
+   *   shout = false   speaking pitch, short syllables, plenty of pauses (the bed)
+   *   shout = true    raised pitch, long open vowels, hardly a breath (cheers)
+   */
+  const VOWELS = [[730, 1090], [530, 1840], [270, 2290], [570, 840], [300, 870], [660, 1720], [440, 1020], [490, 1350]];
+  const OPEN = [[730, 1090], [660, 1720], [570, 840], [640, 1190]]; // "ah", "ay", "oh", "uh": what crowds shout
+  function crowdBuffer(sec, people, shout, done) {
+    const sr = 22050;
+    const fade = Math.floor(sr * 0.6);
+    const len = Math.floor(sr * sec);
+    const n = len + fade;
+    const L = new Float32Array(n);
+    const R = new Float32Array(n);
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const TAU = Math.PI * 2;
+    let k = 0;
+    const person = () => {
+      const high = Math.random() < 0.35;
+      const base = (high ? rnd(175, 245) : rnd(92, 140)) * (shout ? rnd(1.45, 1.85) : 1);
+      const fs = high ? 1.15 : 1;
+      const pan = Math.random();
+      const near = rnd(0.25, 1) ** 1.5; // most of a crowd is far away
+      const gl = Math.cos((pan * Math.PI) / 2) * near;
+      const gr = Math.sin((pan * Math.PI) / 2) * near;
+      const vowels = shout ? OPEN : VOWELS;
+      let phase = Math.random();
+      let talking = Math.random() < (shout ? 0.9 : 0.55);
+      let phraseEnd = Math.floor(rnd(0, 1.5) * sr);
+      let sylStart = 0;
+      let sylLen = 1;
+      let sylEnd = 0;
+      let f0 = base;
+      let tf0 = base;
+      let f1 = 600;
+      let f2 = 1300;
+      let tf1 = f1;
+      let tf2 = f2;
+      let amp = 0;
+      let a1 = 0, a2 = 0, b1 = 0, c1 = 0, c2 = 0, d1 = 0; // resonator coefficients
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0; // resonator state
+      const vib = rnd(4, 6.5);
+      for (let i = 0; i < n; i++) {
+        if (i >= phraseEnd) {
+          talking = !talking;
+          const s = talking ? (shout ? rnd(1.5, 4) : rnd(0.6, 2.6)) : shout ? rnd(0.08, 0.35) : rnd(0.3, 1.8);
+          phraseEnd = i + Math.floor(s * sr);
+        }
+        if (i >= sylEnd) {
+          sylStart = i;
+          sylLen = Math.floor(sr * (shout ? rnd(0.4, 1.2) : rnd(0.09, 0.26)));
+          sylEnd = i + sylLen;
+          const v = vowels[Math.floor(Math.random() * vowels.length)];
+          tf1 = v[0] * fs;
+          tf2 = v[1] * fs;
+          tf0 = base * (shout ? rnd(0.95, 1.25) : rnd(0.82, 1.2));
+        }
+        if ((i & 15) === 0) {
+          f1 += (tf1 - f1) * 0.25;
+          f2 += (tf2 - f2) * 0.25;
+          // Two-pole resonators, normalised to unit gain at the formant.
+          const r1 = Math.exp((-Math.PI * 90) / sr);
+          const r2 = Math.exp((-Math.PI * 130) / sr);
+          const t1 = (TAU * f1) / sr;
+          const t2 = (TAU * f2) / sr;
+          a1 = 2 * r1 * Math.cos(t1);
+          a2 = r1 * r1;
+          b1 = (1 - r1) * 2 * Math.sin(t1);
+          c1 = 2 * r2 * Math.cos(t2);
+          c2 = r2 * r2;
+          d1 = (1 - r2) * 2 * Math.sin(t2) * 0.55;
+        }
+        const u = (i - sylStart) / sylLen;
+        const syl = shout ? Math.min(1, u * 8) * Math.min(1, (1 - u) * 5) : Math.sin(Math.PI * u) ** 0.7;
+        amp += ((talking ? syl : 0) - amp) * 0.01;
+        f0 += (tf0 - f0) * 0.0015;
+        phase += (f0 * (1 + 0.012 * Math.sin((TAU * vib * i) / sr))) / sr;
+        if (phase >= 1) phase -= 1;
+        const src = 1 - 2 * phase + (Math.random() * 2 - 1) * (shout ? 0.35 : 0.25);
+        const x = b1 * src + a1 * x1 - a2 * x2;
+        x2 = x1;
+        x1 = x;
+        const y = d1 * src + c1 * y1 - c2 * y2;
+        y2 = y1;
+        y1 = y;
+        const out = (x + y) * amp;
+        L[i] += out * gl;
+        R[i] += out * gr;
+      }
+    };
+    const tick = () => {
+      for (const end = Math.min(people, k + 4); k < end; k++) person();
+      if (k < people) setTimeout(tick, 0);
+      else done(finish());
+    };
+    setTimeout(tick, 0);
+    const finish = () => {
+      // Seamless loop: fold the extra tail over the head.
+      for (let i = 0; i < fade; i++) {
+        const w = i / fade;
+        L[i] = L[i] * w + L[len + i] * (1 - w);
+        R[i] = R[i] * w + R[len + i] * (1 - w);
+      }
+      let peak = 1e-6;
+      for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+      const b = ctx.createBuffer(2, len, sr);
+      const gain = 0.9 / peak;
+      b.getChannelData(0).set(L.subarray(0, len).map((v) => v * gain));
+      b.getChannelData(1).set(R.subarray(0, len).map((v) => v * gain));
+      return b;
+    };
+  }
+
+  /** Loop `buf` from a random point through a low-pass, shaped by a gain envelope. */
+  function loopVoices(buf, t, dur, { peak, attack = 0.15, cutoff = 3000, rate = 1, dest = stands }) {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    src.playbackRate.value = rate;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = cutoff;
+    f.Q.value = 0.5;
+    const g = ctx.createGain();
+    env(g, t, attack, peak, dur);
+    src.connect(f).connect(g).connect(dest);
+    src.start(t, Math.random() * buf.duration);
+    src.stop(t + attack + dur + 0.1);
+    return { f, g };
+  }
+
+  // Crowd bed: the stands chattering, plus the low air of a big ground; always on.
   function startBed() {
     bed = ctx.createGain();
-    bed.gain.value = 0.05;
-    bed.connect(master);
-    for (const [fq, q, lvl] of [[420, 0.7, 1], [1250, 1.2, 0.45]]) {
-      const src = ctx.createBufferSource();
-      src.buffer = noiseBuf;
-      src.loop = true;
-      src.playbackRate.value = 0.5;
-      const f = ctx.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = fq;
-      f.Q.value = q;
+    bed.gain.setValueAtTime(0, now());
+    bed.gain.setTargetAtTime(BED, now(), 0.6);
+    bed.connect(stands);
+    const talk = ctx.createBufferSource();
+    talk.buffer = chatterBuf;
+    talk.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 2600;
+    talk.connect(f).connect(bed);
+    talk.start();
+    const air = ctx.createBufferSource();
+    air.buffer = noiseBuf;
+    air.loop = true;
+    const fa = ctx.createBiquadFilter();
+    fa.type = 'lowpass';
+    fa.frequency.value = 320;
+    const ga = ctx.createGain();
+    ga.gain.value = 0.35;
+    air.connect(fa).connect(ga).connect(bed);
+    air.start();
+  }
+  const BED = 0.08;
+
+  /** A few fans whistling: quick rising glides, some of them the two-note wolf whistle. */
+  function whistles(t, count) {
+    for (let k = 0; k < count; k++) {
+      const at = t + 0.2 + Math.random() * 1.4;
+      const f = 1900 + Math.random() * 900;
+      const o = ctx.createOscillator();
+      o.type = 'sine';
       const g = ctx.createGain();
-      g.gain.value = lvl;
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.13 + Math.random() * 0.1;
-      const lg = ctx.createGain();
-      lg.gain.value = lvl * 0.35;
-      lfo.connect(lg).connect(g.gain);
-      src.connect(f).connect(g).connect(bed);
-      src.start();
-      lfo.start();
+      if (Math.random() < 0.4) {
+        o.frequency.setValueAtTime(f * 0.8, at);
+        o.frequency.exponentialRampToValueAtTime(f * 1.25, at + 0.18);
+        o.frequency.setValueAtTime(f * 0.75, at + 0.32);
+        o.frequency.exponentialRampToValueAtTime(f * 1.15, at + 0.45);
+        o.frequency.exponentialRampToValueAtTime(f * 0.6, at + 0.75);
+        env(g, at, 0.04, 0.05, 0.75);
+      } else {
+        o.frequency.setValueAtTime(f, at);
+        o.frequency.linearRampToValueAtTime(f * 1.06, at + 0.6);
+        env(g, at, 0.05, 0.04, 0.6 + Math.random() * 0.6);
+      }
+      o.connect(g).connect(stands);
+      o.start(at);
+      o.stop(at + 1.6);
     }
   }
-  /** Crowd swell over the bed: a band of noise plus clapping, `size` 0..1. */
-  function crowd(t, size, dur, { clap = 0.6, bright = 1 } = {}) {
-    noise(t, dur, { freq: 700 + 500 * bright, Q: 0.6, peak: 0.12 + 0.5 * size, attack: 0.25 + 0.2 * (1 - size), rate: 0.7 });
-    noise(t + 0.05, dur * 0.8, { freq: 2200, Q: 0.9, peak: 0.05 + 0.18 * size, attack: 0.3, rate: 0.8 });
-    if (clap) noise(t + 0.3, dur + 0.8, { type: 'highpass', freq: 900, Q: 0.5, peak: clap * (0.15 + 0.4 * size), attack: 0.25, buf: clapBuf });
+
+  /** The stands rise: shouting voices (brighter when bigger), clapping, `size` 0..1. */
+  function crowd(t, size, dur, { clap = 0.6, bright = 1, whistle = 0 } = {}) {
+    if (shoutBuf) {
+      loopVoices(shoutBuf, t, dur, { peak: 0.15 + 0.85 * size, attack: 0.12 + 0.25 * (1 - size), cutoff: 1500 + 2600 * size * bright });
+      // The near rows, a beat behind: thickens it into a mass.
+      loopVoices(shoutBuf, t + 0.08, dur * 0.85, { peak: 0.08 + 0.45 * size, attack: 0.2, cutoff: 1200 + 1800 * bright, rate: 0.93 });
+    }
+    if (chatterBuf) loopVoices(chatterBuf, t, dur * 0.7, { peak: 0.1 + 0.2 * size, attack: 0.2, cutoff: 2200 });
+    if (clap) noise(t + 0.3, dur + 0.8, { type: 'highpass', freq: 900, Q: 0.5, peak: clap * (0.12 + 0.32 * size), attack: 0.25, buf: clapBuf, dest: stands });
+    if (whistle) whistles(t, whistle);
   }
 
   const SOUNDS = {
@@ -199,21 +402,26 @@ export function createAudio() {
       }
     },
     ooh(t, { size = 0.6 } = {}) {
-      for (let k = 0; k < 5; k++) {
-        const f0 = 150 + k * 37 + Math.random() * 20;
-        voice(t + Math.random() * 0.12, 1.1, [[0, f0 * 1.1], [0.35, f0 * 1.2], [1.0, f0 * 0.8]], [[330, 5, 1], [800, 6, 0.4]], 0.05 + 0.06 * size, 0);
+      // The whole ground draws breath: a dark, falling "oooh".
+      if (shoutBuf) {
+        const { f } = loopVoices(shoutBuf, t, 1.2, { peak: 0.1 + 0.4 * size, attack: 0.18, cutoff: 1100, rate: 0.82 });
+        f.frequency.setValueAtTime(1100, t);
+        f.frequency.exponentialRampToValueAtTime(500, t + 1.4);
       }
-      crowd(t, size * 0.4, 1.2, { clap: 0, bright: 0.2 });
+      for (let k = 0; k < 6; k++) {
+        const f0 = 150 + k * 31 + Math.random() * 20;
+        voice(t + Math.random() * 0.15, 1.1, [[0, f0 * 1.1], [0.35, f0 * 1.2], [1.0, f0 * 0.8]], [[330, 5, 1], [800, 6, 0.4]], 0.02 + 0.03 * size, 0, stands);
+      }
     },
     cheer(t, { size = 0.7 } = {}) {
-      crowd(t, size, 2.4 + 1.6 * size);
+      crowd(t, size, 2.4 + 1.6 * size, { whistle: size > 0.6 ? 2 : 0 });
     },
     roar(t) {
-      crowd(t, 1, 3.6, { clap: 0.8, bright: 1.2 });
-      SOUNDS.ooh(t, { size: 0.3 });
+      crowd(t, 1, 3.6, { clap: 0.8, bright: 1.2, whistle: 4 });
     },
     applause(t, { size = 0.35 } = {}) {
-      noise(t, 1.8 + size * 2, { type: 'highpass', freq: 900, Q: 0.5, peak: 0.15 + 0.4 * size, attack: 0.2, buf: clapBuf });
+      noise(t, 1.8 + size * 2, { type: 'highpass', freq: 900, Q: 0.5, peak: 0.15 + 0.4 * size, attack: 0.2, buf: clapBuf, dest: stands });
+      if (chatterBuf) loopVoices(chatterBuf, t, 1.6 + size * 2, { peak: 0.1 * size, attack: 0.3, cutoff: 2400 });
     },
   };
 
@@ -234,7 +442,7 @@ export function createAudio() {
     },
     /** Duck the crowd bed while paused. */
     setPaused(p) {
-      if (bed) bed.gain.setTargetAtTime(p ? 0.0 : 0.05, now(), 0.2);
+      if (bed) bed.gain.setTargetAtTime(p ? 0.0 : BED, now(), 0.2);
     },
     played,
     /** Output RMS right now (QA: proves something is actually sounding). */
@@ -243,6 +451,10 @@ export function createAudio() {
       const d = new Float32Array(meter.fftSize);
       meter.getFloatTimeDomainData(d);
       return Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length);
+    },
+    /** QA: the context and the final mix node, to record what the game sounds like. */
+    get tap() {
+      return ctx && { ctx, out };
     },
     get muted() {
       return muted;

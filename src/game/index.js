@@ -10,7 +10,7 @@ import { createController } from './controller.js';
 import { createHud } from './hud.js';
 import { createInput } from './input.js';
 import { createAudio } from './audio.js';
-import { tuning } from './tuning.js';
+import { tuning, SCALES } from './tuning.js';
 import { createCalibration } from './calibration.js';
 import { createTuningPanel } from './tuningPanel.js';
 import { createGamepad, buttonName } from './gamepad.js';
@@ -18,6 +18,8 @@ import { createGamepadPanel } from './gamepadPanel.js';
 import { createReplay } from './replay.js';
 import { createScorebook } from './scorebook.js';
 import { createScorecard } from './scorecard.js';
+import { loadChoice, saveChoice, randomConditions, resolveConditions } from './conditions.js';
+import { createConditionsPanel } from './conditionsPanel.js';
 import { DIFFICULTY, OVAL } from './rules.js';
 import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './batting.js';
 
@@ -33,16 +35,18 @@ import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './ba
  *   ?manual=1                 time only moves via __game.advance() (QA)
  *   ?nets=1                   straight into the calibration nets
  *   ?cards=0                  no automatic scorecards (QA; B still shows it)
+ *   ?cond=sky:overcast,pitch:green   conditions for this visit (QA; else the saved choice)
  */
 export function startGame({ renderer, post, scene, camera, canvas, params }) {
   // Calibrated values first: the browser's save, else a baked calibration.json.
   tuning.init();
-  createLighting(renderer, scene, { extent: 31 });
+  const lights = createLighting(renderer, scene, { extent: 33 });
+  const baseLight = { sun: lights.sun.intensity, hemi: lights.hemi.intensity, color: lights.sun.color.clone() };
   const mats = createMaterials();
   const ground = buildGameGround(scene, mats);
   const cast = buildCast(scene, mats, { fielders: 7 });
   const fx = buildEffects(scene, mats);
-  const board = buildScoreboard(scene, mats, -23.4, 8.2, 'dynamic');
+  const board = buildScoreboard(scene, mats, -27.2, 8.2, 'dynamic');
   board.group.rotation.y = 1.73;
 
   const [sa, sb] = OVAL.slab;
@@ -63,26 +67,55 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const bot = params.get('bot') === '1';
   const manual = params.get('manual') === '1';
 
+  // The day's conditions: the saved choice (or a random roll), shown on the intro card.
+  let choice = loadChoice();
+  if (params.has('cond')) choice = { random: false, sel: { ...choice.sel, ...Object.fromEntries(params.get('cond').split(',').map((kv) => kv.split(':'))) } };
+  if (choice.random) choice = { ...choice, sel: randomConditions() };
+  /** The ground looks the part: the light for the sky, the strip's colour for the pitch. */
+  function applyLook(sel) {
+    const c = resolveConditions(sel);
+    lights.sun.intensity = baseLight.sun * c.light.sun;
+    lights.hemi.intensity = baseLight.hemi * c.light.hemi;
+    lights.sun.color.copy(baseLight.color).multiply(new THREE.Color(c.light.tint));
+    mats.pitch.color.set(c.pitchColor);
+  }
+  const setChoice = (c) => {
+    choice = c;
+    saveChoice(choice);
+    applyLook(choice.sel);
+    if (ctl.phase === 'intro') showIntro();
+    if (ctl.nets) {
+      ctl.m.cond = resolveConditions(choice.sel);
+      hud.conditions(choice.sel);
+    }
+  };
+
   const start = () => {
     hud.hideCard();
     hud.reset();
     calib.show(false);
+    condPanel.close();
     if (ctl.phase === 'result') seed = fixedSeed != null ? seed + 1 : (Date.now() % 100000) + 1;
-    ctl.startMatch(difficulty, seed);
+    applyLook(choice.sel);
+    ctl.startMatch(difficulty, seed, { conditions: choice.sel });
+    hud.conditions(choice.sel);
     scorecard.setBook(createScorebook(seed));
   };
   const startNets = () => {
     hud.hideCard();
     hud.reset();
-    ctl.startMatch(calib.level, seed, { nets: true, field: calib.field });
+    condPanel.close();
+    ctl.startMatch(calib.level, seed, { nets: true, field: calib.field, conditions: choice.sel });
+    hud.conditions(choice.sel);
     calib.show(true);
   };
+  const showIntro = () => hud.intro({ target: ctl.m.target, difficulty, conditions: choice.sel, random: choice.random, teams: (() => { const b = createScorebook(seed); return { bat: b.teams.bat.name, bowl: b.teams.bowl.name }; })() });
   const pick = (d) => {
     if (ctl.phase !== 'intro') return;
     difficulty = d;
     ctl.preview(difficulty, seed);
     hud.guide = DIFFICULTY[d].guide;
-    hud.intro({ target: ctl.m.target, difficulty, teams: (() => { const b = createScorebook(seed); return { bat: b.teams.bat.name, bowl: b.teams.bowl.name }; })() });
+    showIntro();
   };
   const hud = createHud({
     hidden: params.get('hud') === '0',
@@ -92,6 +125,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     onNets: () => ctl.phase === 'intro' && startNets(),
     onTune: () => panel.toggle(),
     onController: () => padPanel.toggle(),
+    onConditions: () => condPanel.toggle(),
   });
   const ctl = createController({
     scene,
@@ -108,10 +142,12 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
         if (!ctl.nets && book()) {
           book().ball(e, ctl.m);
           // After a wicket or an over (the last ball's card comes with the result).
-          if ((e.o.out || e.overEnd) && !ctl.m.result && params.get('cards') !== '0') ctl.at(e.tCall + 2.2, () => scorecard.show(e.o.out ? 'wicket' : 'over'));
+          if ((e.o.out || e.overEnd) && !ctl.m.result && params.get('cards') !== '0') ctl.at(Math.max(e.tCall + 2.2, e.tReveal + 1.6), () => scorecard.show(e.o.out ? 'wicket' : 'over'));
         }
       }
       if (kind === 'result' && !ctl.nets && params.get('cards') !== '0') scorecard.show('end');
+      // A new day for the next match (O shows it before you start).
+      if (kind === 'result' && choice.random) choice = { ...choice, sel: randomConditions() };
       // Fast-forward keeps the big moments and drops the small stuff.
       if (kind === 'sfx' && !(ctl.ff && ['step', 'glove', 'bounce', 'applause'].includes(e.name))) audio.play(e.name, e.opts ?? {});
     },
@@ -119,6 +155,14 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   const hudRoot = document.getElementById('hud');
   const panel = createTuningPanel({ tuning, ctl, root: hudRoot });
+  const condPanel = createConditionsPanel({
+    root: hudRoot,
+    ctl,
+    getChoice: () => choice,
+    setChoice,
+    // Before a match, between matches, and any time in the nets.
+    editable: () => ctl.phase === 'intro' || ctl.phase === 'result' || ctl.nets,
+  });
   const calib = createCalibration({
     ctl,
     tuning,
@@ -133,7 +177,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   // Keyboard and controller drive the same two handlers.
   const handleShot = (dir, lofted, ts, special) => {
-    if (padPanel.isOpen || panel.isOpen || replay.active) return;
+    if (padPanel.isOpen || panel.isOpen || condPanel.isOpen || replay.active) return;
     if (calib.cardOpen) calib.mark(dir, special);
     else ctl.press(dir, lofted, toGame(ts), special);
   };
@@ -144,6 +188,8 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       if (k === 'replay') return void replay.start();
       if (k === 'pad') return padPanel.toggle();
       if (padPanel.isOpen) return void (k === 'pause' && padPanel.escape());
+      if (k === 'conditions') return condPanel.toggle();
+      if (condPanel.isOpen) return void (['pause', 'enter'].includes(k) && condPanel.close());
       if (k === 'tune') return panel.toggle();
       if (panel.isOpen) return void (k === 'pause' && panel.close());
       if (calib.cardOpen && calib.key(k)) return;
@@ -172,7 +218,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const pad = createGamepad({
     onShot: handleShot,
     onKey: handleKey,
-    cardOpen: () => scorecard.isOpen || replay.active || calib.cardOpen || panel.isOpen || padPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
+    cardOpen: () => scorecard.isOpen || replay.active || calib.cardOpen || panel.isOpen || padPanel.isOpen || condPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
     onConnect: (gp, on) => {
       toast.innerHTML = on ? `🎮 <b>${gp.id.replace(/\(.*\)/, '').trim() || 'Controller'}</b> connected · ${buttonName(pad.settings.map.ground)} shot · K or ${buttonName(pad.settings.map.pad)} to map buttons` : '🎮 Controller disconnected';
       toast.style.display = 'block';
@@ -198,7 +244,8 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     if (best.f < 0.35 && !del.hitsStumps && !del.padImpact('stance')) return;
     const sh = SHOTS[best.k];
     const jitter = (Math.sin(tR * 12.9898) * 43758.5453 % 1) * 0.03;
-    const tp = tR + del.contactTime(shotFoot(sh, del)) - sh.swing + (sh.bias ?? 0) + jitter;
+    // (The press is read through the calibrated latency offset, so the bot presses that much later.)
+    const tp = tR + del.contactTime(shotFoot(sh, del)) - sh.swing + (sh.bias ?? 0) + jitter + SCALES.offsetMs / 1000;
     const dir = Object.entries({ D: 'straight', DL: 'cover', L: 'cut', UL: 'lateCut', U: 'punch', UR: 'glance', R: 'pull', DR: 'onDrive', '': 'defence' }).find(([, v]) => v === (best.k === 'flick' ? 'pull' : best.k))[0];
     const lofted = best.f > 0.9 && best.k !== 'defence' && ctl.m.need() / Math.max(1, ctl.m.ballsLeft()) > 1.6;
     ctl.events.push({ t: tp, fn: () => ctl.press(dir, lofted, tp) });
@@ -261,7 +308,8 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   hud.guide = DIFFICULTY[difficulty].guide;
   if (bot) start();
   else if (params.get('nets') === '1') startNets();
-  else hud.intro({ target: ctl.m.target, difficulty, teams: (() => { const b = createScorebook(seed); return { bat: b.teams.bat.name, bowl: b.teams.bowl.name }; })() });
+  else showIntro();
+  applyLook(choice.sel);
   director.set('broadcast');
   frame(0);
 
@@ -297,6 +345,9 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     padPanel,
     replay,
     scorecard,
+    condPanel,
+    conditions: () => choice,
+    setConditions: setChoice,
     start,
     startNets,
     /** Step the game by `seconds` in fixed `dt` steps (QA; use with ?manual=1). */

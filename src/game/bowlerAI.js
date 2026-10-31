@@ -1,5 +1,6 @@
 import { LENGTHS, HEIGHTS, LINES, lengthOf, lineOf } from './delivery.js';
 import { GAME } from './rules.js';
+import { NEUTRAL } from './conditions.js';
 
 /**
  * The AI captain and bowler. It sets the target, picks a plan and a field per
@@ -96,6 +97,11 @@ export function chooseDelivery(m, plan, memory, rng) {
     tw.outswinger = (tw.outswinger ?? 0) + 2.5;
     tw.bouncer = (tw.bouncer ?? 0) * 0.5;
   }
+  // Bowl to the conditions: swing under cloud, cutters and bouncers off a helpful pitch.
+  const C = m.cond ?? NEUTRAL;
+  for (const k of ['outswinger', 'inswinger']) if (tw[k]) tw[k] *= C.swing ** 0.8;
+  for (const k of ['offcutter', 'legcutter']) if (tw[k]) tw[k] *= C.seam ** 0.7;
+  if (tw.bouncer) tw.bouncer *= C.bounce ** 3;
   const type = rng.weighted(tw);
   const T = TYPES[type];
 
@@ -130,16 +136,26 @@ export function chooseDelivery(m, plan, memory, rng) {
   // A stray one now and then: down the leg side or a wide.
   if (rng() < 0.035) lineZ = rng() < 0.5 ? rng.range(0.92, 1.05) : rng.range(-0.85, -0.74);
   const actualLen = lengthOf(lenM);
-  const swing = rng.range(...T.swing);
-  const seam = rng.range(...T.seam);
-  const kph = Math.round(rng.range(...T.kph));
+  // The sky scales the swing and a cross-wind pushes the ball along (toward off
+  // is away from the right-hander, like outswing); the pitch scales the seam.
+  const swing = rng.range(...T.swing) * C.swing + C.wind.z * 0.012;
+  const seam = rng.range(...T.seam) * C.seam;
+  // Bowling into the wind costs a little pace, with it adds a little.
+  const kph = Math.round(rng.range(...T.kph) * (1 - C.wind.x * 0.004));
   // Height follows where in its band it pitched (shorter = higher), and the
   // pitch adds its own: now and then one keeps low or climbs. Cutters vary more.
   const band = LENGTHS[actualLen];
   const u = Math.min(1, Math.max(0, (lenM - band[0]) / (band[1] - band[0])));
   const [h0, h1] = HEIGHTS[actualLen];
-  const pitchVar = (rng() + rng() - 1) * (type === 'offcutter' || type === 'legcutter' ? 0.17 : 0.12);
-  const hStumps = Math.max(0.05, h0 + (h1 - h0) * (0.15 + 0.7 * u) + pitchVar + (type === 'slower' ? -0.05 : 0));
+  const pv = (rng() + rng() - 1) * (type === 'offcutter' || type === 'legcutter' ? 0.17 : 0.12);
+  let pitchVar = pv * C.uneven;
+  // An uneven surface throws up the odd shooter or one that rears.
+  if (C.uneven > 1 && rng() < 0.05 * (C.uneven - 1)) pitchVar += rng() < 0.6 ? -0.22 : 0.25;
+  // What the surface did beyond an even pitch: the batter can't allow for it.
+  const surprise = pitchVar - pv;
+  const h = h0 + (h1 - h0) * (0.15 + 0.7 * u) + pitchVar + (type === 'slower' ? -0.05 : 0);
+  // A bouncy pitch lifts everything that isn't skidding through at the feet.
+  const hStumps = Math.max(0.05, 0.1 + (h - 0.1) * C.bounce);
   return {
     type,
     typeName: T.name,
@@ -155,5 +171,7 @@ export function chooseDelivery(m, plan, memory, rng) {
     hStumps,
     swing,
     seam,
+    keep: C.keep,
+    surprise,
   };
 }

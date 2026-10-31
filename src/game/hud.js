@@ -1,5 +1,6 @@
 import { GAME, DIFFICULTY } from './rules.js';
 import { SHOTS } from './batting.js';
+import { describeConditions, WIND, WIND_DIR } from './conditions.js';
 
 /**
  * The Chase HUD: a DOM layer over the canvas (never through the pixel pass).
@@ -44,6 +45,11 @@ const CSS = `
 #hud-meter .zone.perfect { background: #2f8f86; }
 #hud-meter .dot { position: absolute; top: 1px; bottom: 1px; width: 6px; margin-left: -3px; background: #c13a3c; border-radius: 3px; }
 #hud-meter .press { position: absolute; top: 0; bottom: 0; width: 2px; background: #1c2847; display: none; }
+#hud-cond { position: absolute; left: 12px; bottom: 12px; padding: 5px 9px; font-size: 11.5px; display: none; max-width: 300px; }
+#hud-cond.on { display: block; }
+#hud-cond .k { color: #6f6a55; font-size: 10.5px; letter-spacing: 0.06em; }
+#hud-cond .arrow { display: inline-block; color: #283a63; font-weight: bold; }
+#hud-card .cond { display: inline-block; text-align: left; font-size: 12px; background: #ebe4d0; border: 1px solid #c9bfa4; border-radius: 6px; padding: 5px 10px; margin: 2px 0; }
 #hud-help { position: absolute; right: 12px; bottom: 12px; padding: 8px 10px; font-size: 11.5px; pointer-events: auto; }
 #hud-help table { border-collapse: collapse; }
 #hud-help td { padding: 1px 6px; text-align: center; }
@@ -70,7 +76,7 @@ const CSS = `
 #hud-pad .grid { display: grid; grid-template-columns: repeat(3, 52px); gap: 4px; }
 #hud-pad button { font: 11px/1.1 ui-monospace, Menlo, monospace; height: 44px; border-radius: 8px; border: 1px solid #c9bfa4; background: rgba(246,242,230,0.94); color: #2a211c; touch-action: manipulation; }
 #hud-pad button.loft.on { background: #283a63; color: #f6f2e6; }
-@media (max-width: 620px) { #hud-call { font-size: 30px; } #hud-help { display: none; } #hud-plan { display: none; } #hud-top { font-size: 11px; gap: 8px; } }
+@media (max-width: 620px) { #hud-call { font-size: 30px; } #hud-help { display: none; } #hud-plan { display: none; } #hud-cond { bottom: auto; top: 64px; font-size: 10.5px; } #hud-top { font-size: 11px; gap: 8px; } }
 `;
 
 const GRID = [
@@ -79,7 +85,16 @@ const GRID = [
   ['DL', '↓←', 'Cover'], ['D', '↓', 'Straight'], ['DR', '↓→', 'On drive'],
 ];
 
-export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTune, onController } = {}) {
+/** Sky, wind (with an arrow as it blows on screen), pitch and outfield. */
+function conditionsHtml(sel) {
+  const d = describeConditions(sel);
+  const w = WIND[sel.wind]?.speed ? WIND_DIR[sel.windDir] : null;
+  // Screen arrows from the broadcast end: the batter is up the screen, off side to the left.
+  const arrow = w ? { atBatter: '↑', atBowler: '↓', offSide: '←', legSide: '→' }[sel.windDir] : '';
+  return `${d.sky} · <span class="arrow">${arrow}</span> ${d.wind}<br>${d.pitch} · ${d.outfield}`;
+}
+
+export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTune, onController, onConditions } = {}) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -92,6 +107,7 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
     <div id="hud-info" class="panel"></div>
     <div id="hud-plan" class="panel"></div>
     <div id="hud-next" class="panel"></div>
+    <div id="hud-cond" class="panel"></div>
     <div id="hud-meter" class="panel"><div class="track"><div class="zone"></div><div class="zone perfect"></div><div class="press"></div><div class="dot"></div></div></div>
     <div id="hud-help" class="panel">
       <table>${[0, 1, 2].map((r) => `<tr>${GRID.slice(r * 3, r * 3 + 3).map(([, k, n]) => `<td><span class="k">${k}</span> ${n}</td>`).join('')}</tr>`).join('')}</table>
@@ -107,6 +123,7 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
   const info = $('#hud-info');
   const planEl = $('#hud-plan');
   const next = $('#hud-next');
+  const condEl = $('#hud-cond');
   let nextPv = null;
   const meter = $('#hud-meter');
   const help = $('#hud-help');
@@ -197,11 +214,11 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
       });
       if (o.out) {
         const how = o.out === 'caught' ? (o.fielding.by === 'keeper' ? 'Caught behind' : `Caught at ${o.fielding.name.replace('the ', '')}`) : o.kind === 'playedOn' ? 'Played on' : o.out === 'lbw' ? 'LBW' : 'Bowled';
-        flash('OUT', 'out', how, t + 0.2, 2.2);
-      } else if (o.runs === 6) flash('SIX', 'six', null, t + 0.5);
-      else if (o.runs === 4) flash('FOUR', '', null, t + 0.6);
+        flash('OUT', 'out', how, t + 0.1, 2.2);
+      } else if (o.runs === 6) flash('SIX', 'six', null, t);
+      else if (o.runs === 4) flash('FOUR', '', null, t);
       else if (o.wide) flash('WIDE', '', '+1', t + 0.2, 1.2);
-      else if (o.fielding?.type === 'drop') flash('DROPPED', '', o.fielding.name, t + 0.1, 1.4);
+      else if (o.fielding?.type === 'drop') flash('DROPPED', '', o.fielding.name, t, 1.4);
     },
     score(m, t = lastT) {
       later(t, () => {
@@ -255,11 +272,18 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
         call.className = '';
       });
     },
-    intro({ target, difficulty, teams }) {
+    /** The day's conditions in the corner during play (null hides it). */
+    conditions(sel) {
+      if (!sel) return void condEl.classList.remove('on');
+      condEl.innerHTML = `<div class="k">CONDITIONS · O</div>${conditionsHtml(sel)}`;
+      condEl.classList.add('on');
+    },
+    intro({ target, difficulty, teams, conditions, random }) {
       const diffs = Object.entries(DIFFICULTY).map(([k, d], i) => `<button data-diff="${k}" class="${k === difficulty ? 'on' : ''}">${i + 1} · ${d.label}</button>`).join('');
       card.innerHTML = `<h1>THE CHASE</h1>
         ${teams ? `<p class="small" style="margin:2px 0 6px"><b>${teams.bat}</b> v <b>${teams.bowl}</b></p>` : ''}<p>The AI has set you <b>${target}</b> to win off <b>${GAME.overs} overs</b>, with <b>${GAME.wickets} wickets</b>.<br>You bat. It bowls, sets the field, and learns where you score.</p>
         <div class="row">${diffs}</div>
+        ${conditions ? `<div><div class="cond">${conditionsHtml(conditions)}</div><div class="row" style="margin:6px 0 10px"><button data-act="cond">Conditions (O)${random ? ' · 🎲 random' : ''}</button></div></div>` : ''}
         <div class="keys">${GRID.map(([, k, n]) => `<div><b>${k}</b> ${n}</div>`).join('')}</div>
         <p class="small">During the run-up an amber marker shows where the ball is <i>aimed</i> to pitch, with its line and type. Read it, then watch the ball: bowlers miss their spot, and on harder levels the read comes later, vaguer, and sometimes lies.</p>
         <p class="small">Hold the arrows for a direction, press <b>D</b> to play along the ground or <b>A</b> to loft it. No key is a leave. <b>S</b> plays a special: sweep, <b>S</b>+← reverse sweep, <b>S</b>+↑ scoop. They pay well and need tighter timing.<br>Time it so the bat meets the ball: early drags it leg side, late finds the edge.</p>
@@ -271,6 +295,8 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
       card.querySelector('[data-act=nets]').onclick = () => onNets?.();
       card.querySelector('[data-act=tune]').onclick = () => onTune?.();
       card.querySelector('[data-act=controller]').onclick = () => onController?.();
+      const cb = card.querySelector('[data-act=cond]');
+      if (cb) cb.onclick = () => onConditions?.();
     },
     pause(on) {
       if (on) {

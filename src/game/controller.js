@@ -413,6 +413,10 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
 
     // Umpire.
     const tCall = cur.tContact ?? tR + del.tStumps;
+    // When the outcome can be seen: a catch taken or put down, the ball at the
+    // rope. Nothing announces it before then.
+    const fl = o.kind === 'hit' ? o.fielding : null;
+    const tReveal = !fl ? tCall : fl.type === 'catch' || fl.type === 'drop' ? tCall + fl.t + 0.1 : fl.type === 'boundary' ? tCall + (o.sim?.tRope ?? 1) : tCall;
     if (o.wide) umpireSignal(UMP_WIDE, tR + 1.2, 2.0);
     else if (o.out === 'lbw' || o.out === 'caught') umpireSignal(UMP_OUT, (r.tOut ?? tCall) + 1.0, 2.0);
     else if (o.runs === 6) umpireSignal(UMP_SIX, tCall + (o.sim?.tRope ?? 1) + 0.4, 2.0);
@@ -464,14 +468,14 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     // Score it.
     const rec = m.record(o);
     let nextT0 = Math.max(tMark + 0.25, tHas + 0.5, cur.battersReady ?? 0);
-    hud.result({ m, o, cur, t: tCall + 0.3, describe: describeDelivery(o.spec) });
-    at(tCall + 0.6, (t) => {
+    hud.result({ m, o, cur, t: Math.max(tCall + 0.3, tReveal), describe: describeDelivery(o.spec) });
+    at(Math.max(tCall + 0.6, tReveal + 0.3), (t) => {
       if (ctl.nets) board.show(['NETS', `${m.log.length} BALLS`], boardVerdict(o), t);
       else board.show([`TARGET ${m.target}   ${m.overText()} OV`, `${m.runs}-${m.wkts}`], boardVerdict(o), t);
       hud.score(m, t);
     });
     // Who was on strike, and (after a wicket) who came in: for the scorebook.
-    onEvent('outcome', { o, tCall, striker: s, incoming: o.out ? roles.striker : null, overEnd: rec.overEnd, field: m.field });
+    onEvent('outcome', { o, tCall, tReveal, striker: s, incoming: o.out ? roles.striker : null, overEnd: rec.overEnd, field: m.field });
 
     if (rec.result) {
       ctl.phase = 'ending';
@@ -1168,12 +1172,12 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   }
 
   // ---------------------------------------------------------------- lifecycle
-  /** opts.nets: practice, no target or result, the field stays at opts.field. */
+  /** opts.nets: practice, no target or result, the field stays at opts.field. opts.conditions: the day (conditions.js). */
   function startMatch(difficulty, seed, opts = {}) {
     ctl.difficulty = difficulty;
     ctl.seed = seed;
     ctl.nets = !!opts.nets;
-    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets });
+    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets, conditions: opts.conditions });
     ctl.events = [];
     ctl.cur = null;
     ctl.ff = false;

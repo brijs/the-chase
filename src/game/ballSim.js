@@ -8,8 +8,12 @@ import { BALL_R } from '../config.js';
  *
  * Returns { samples: [{ t, x, y, z, air, speed }], six, four, tRope, tStop }.
  * `air` stays true until the first bounce.
+ *
+ * env (the match conditions): wind { x, z } m/s, which the drag works against
+ * while the ball is in the air, and roll, the outfield's rolling resistance
+ * (1 normal, more is a slow outfield).
  */
-export function simulateBatted(p0, { az, speed, elev }, maxT = 9) {
+export function simulateBatted(p0, { az, speed, elev }, { wind = { x: 0, z: 0 }, roll = 1, maxT = 9 } = {}) {
   const h = 1 / 240;
   let x = p0.x, y = Math.max(BALL_R, p0.y), z = p0.z;
   const ch = Math.cos(elev) * speed;
@@ -30,9 +34,10 @@ export function simulateBatted(p0, { az, speed, elev }, maxT = 9) {
       x += vx * h;
       y += vy * h;
       z += vz * h;
-      // A touch of air drag on a hard hit.
-      const k = 1 - 0.006 * h * Math.hypot(vx, vy, vz);
-      vx *= k; vz *= k;
+      // A touch of air drag on a hard hit, relative to the moving air.
+      const rx = vx - wind.x, rz = vz - wind.z;
+      const k = 0.006 * h * Math.hypot(rx, vy, rz);
+      vx -= k * rx; vz -= k * rz;
       if (y <= BALL_R) {
         y = BALL_R;
         if (air) air = false;
@@ -50,7 +55,7 @@ export function simulateBatted(p0, { az, speed, elev }, maxT = 9) {
       }
     } else {
       const sp = Math.hypot(vx, vz);
-      const dec = (2.6 + sp * 0.14) * h;
+      const dec = (2.6 + sp * 0.14) * roll * h;
       if (sp <= dec || sp < 0.15) {
         vx = 0; vz = 0;
         stopped = true;

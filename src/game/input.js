@@ -42,7 +42,7 @@ export function createInput({ onShot, onKey }) {
       else pending.timer = setTimeout(fire, 60);
       return;
     }
-    const map = { enter: 'enter', p: 'pause', escape: 'pause', c: 'camera', ' ': 'skip', h: 'help', '?': 'help', g: 'guide', m: 'mute', t: 'tune', n: 'nets', k: 'pad', r: 'replay', b: 'scorecard', f: 'feedback', 1: '1', 2: '2', 3: '3', 7: '7', 8: '8', 9: '9', 4: '4', 5: '5', 6: '6', q: 'q', w: 'w', e: 'e', z: 'z', x: 'x' }; // (C stays 'camera'; the feedback card reads it as "too narrow")
+    const map = { enter: 'enter', p: 'pause', escape: 'pause', c: 'camera', ' ': 'skip', h: 'help', '?': 'help', g: 'guide', m: 'mute', t: 'tune', n: 'nets', k: 'pad', r: 'replay', b: 'scorecard', f: 'feedback', 1: '1', 2: '2', 3: '3', 7: '7', 8: '8', 9: '9', 4: '4', 5: '5', 6: '6', q: 'q', w: 'w', e: 'e', z: 'z', x: 'x', o: 'conditions' }; // (C stays 'camera'; the feedback card reads it as "too narrow")
     if (map[k]) {
       e.preventDefault();
       onKey(map[k], e);

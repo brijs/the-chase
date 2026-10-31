@@ -4,6 +4,8 @@ import { buildDelivery } from '../src/game/delivery.js';
 import { TYPES } from '../src/game/bowlerAI.js';
 import { readFileSync } from 'node:fs';
 import { tuning } from '../src/game/tuning.js';
+import { simulateBatted } from '../src/game/ballSim.js';
+import { resolveConditions } from '../src/game/conditions.js';
 
 // CAL=calibration.json runs with a calibration applied (default: code defaults).
 if (process.env.CAL) {
@@ -76,6 +78,33 @@ cases.push(['S with -> is still the sweep', () => 0, () => shotFor('R', true, de
 // The straight ball barely moves.
 const T = TYPES.straight;
 cases.push([`straight ball: swing ${T.swing.join('..')} m, seam ${T.seam.join('..')} m`, () => 0, () => Math.max(...T.swing.map(Math.abs), ...T.seam.map(Math.abs)) <= 0.03]);
+// Conditions: the sky swings it, the wind carries it, the pitch bounces it, the outfield slows it.
+const avg = (cond, f, keep = () => true) => {
+  // Same seeds for every condition; only the balls that pass `keep` count.
+  let s = 0, n = 0;
+  for (let i = 1; i <= 600; i++) {
+    const m = createMatch({ seed: 500 + i, conditions: cond });
+    m.startOver();
+    const sp = m.nextDelivery().spec;
+    if (keep(sp)) { s += f(sp); n++; }
+  }
+  return s / Math.max(1, n);
+};
+const calm = { wind: 'calm' };
+const swingOf = (sky) => avg({ ...calm, sky }, (sp) => Math.abs(sp.swing));
+cases.push([`swing: sunny ${swingOf('sunny').toFixed(2)} < cloudy ${swingOf('cloudy').toFixed(2)} < humid ${swingOf('humid').toFixed(2)} m`, () => 0, () => swingOf('sunny') < swingOf('cloudy') && swingOf('cloudy') < swingOf('humid')]);
+const hOf = (pitch) => avg({ ...calm, pitch }, (sp) => sp.hStumps, (sp) => sp.length === 'short' || sp.length === 'bouncer');
+cases.push([`short-ball height at the stumps: dusty ${hOf('dusty').toFixed(2)} < standard ${hOf('standard').toFixed(2)} < green ${hOf('green').toFixed(2)} m`, () => 0, () => hOf('dusty') < hOf('standard') && hOf('standard') < hOf('green')]);
+const lofted = { az: 0, speed: 19, elev: 0.6 };
+const carry = (sel) => { const c = resolveConditions(sel); const sim = simulateBatted({ x: -7.1, y: 0.8, z: 0 }, lofted, { wind: c.wind, roll: c.roll }); return sim.samples.find((q) => !q.air).x + 7.1; };
+const [cInto, cCalm, cBack] = [carry({ wind: 'strong', windDir: 'atBatter' }), carry(calm), carry({ wind: 'strong', windDir: 'atBowler' })];
+cases.push([`lofted drive carries ${cInto.toFixed(1)} m into the wind, ${cCalm.toFixed(1)} calm, ${cBack.toFixed(1)} with it`, () => 0, () => cInto < cCalm - 1 && cBack > cCalm + 1]);
+const cross = (() => { const c = resolveConditions({ wind: 'strong', windDir: 'offSide' }); const sim = simulateBatted({ x: -7.1, y: 0.8, z: 0 }, lofted, { wind: c.wind }); return sim.samples.find((q) => !q.air).z; })();
+cases.push([`a cross-wind to off pushes a straight lofted hit ${cross.toFixed(1)} m off side`, () => 0, () => cross > 0.8]);
+const roll = (outfield) => { const c = resolveConditions({ ...calm, outfield }); return simulateBatted({ x: -7.1, y: 0.2, z: 0 }, { az: 0.3, speed: 11, elev: 0 }, { roll: c.roll }).samples.at(-1).x; };
+cases.push([`a 11 m/s ground shot rolls to x ${roll('slow').toFixed(1)} (slow) < ${roll('standard').toFixed(1)} < ${roll('fast').toFixed(1)} (fast)`, () => 0, () => roll('slow') < roll('standard') && roll('standard') < roll('fast')]);
+cases.push(['no conditions = the neutral day (calm, standard)', () => 0, () => { const m = createMatch({ seed: 3 }); return m.cond.wind.x === 0 && m.cond.wind.z === 0 && m.cond.swing === 1 && m.cond.keep === 0.9; }]);
+
 let fail = 0;
 for (const [name, p, ok] of cases) {
   const pass = ok(p);

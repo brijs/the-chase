@@ -66,7 +66,7 @@ function lin(t0, p, v, a = { x: 0, y: -G, z: 0 }) {
 }
 
 /**
- * spec: { type, kph, length, lenM, line, lineZ, hStumps, swing, seam }
+ * spec: { type, kph, length, lenM, line, lineZ, hStumps, swing, seam, keep? }
  * paceK scales real speed (the diorama runs ~15% slow so the ball reads).
  * Returns a delivery with pos(t) for t >= 0 seconds after release.
  */
@@ -90,8 +90,8 @@ export function buildDelivery(spec, paceK = 0.8, rel = RELEASE_PT) {
   };
   const f1 = lin(0, rel, v1, a1);
 
-  // Post-bounce: the pitch takes ~10% of the pace; seam is the line change.
-  const vx2 = v1.x * 0.9;
+  // Post-bounce: the pitch takes ~10% of the pace (spec.keep: how much it keeps); seam is the line change.
+  const vx2 = v1.x * (spec.keep ?? 0.9);
   const T2 = (xb - STUMPS_X) / -vx2;
   const hS = spec.hStumps + (BALL_R - BALL_REAL_R);
   const v2 = { x: vx2, y: (hS - BALL_R + 0.5 * G * T2 * T2) / T2, z: (zs - zb) / T2 };

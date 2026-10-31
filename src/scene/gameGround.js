@@ -33,7 +33,7 @@ export const GAME_FIT_POINTS = (() => {
     const th = (k / 24) * Math.PI * 2;
     pts.push(ellPt(th, OVAL.slab, 0), ellPt(th, OVAL.slab, -0.42));
   }
-  pts.push(new THREE.Vector3(-23.4, 5.75, 8.2));
+  pts.push(new THREE.Vector3(-27.2, 5.75, 8.2));
   return pts;
 })();
 
@@ -129,7 +129,7 @@ export function buildGameGround(scene, mats) {
 
   // Sightscreen behind the striker (what the broadcast camera looks at).
   const ss = new THREE.Group();
-  ss.position.set(-24.6, 0, 0.3);
+  ss.position.set(OVAL.cx - OVAL.boards[0] - 1.4, 0, 0.3); // just outside the boards
   g.add(ss);
   box(ss, 0.18, 2.1, 6.2, mats.whites, 0, 1.25, 0, { r: 0.03 });
   for (const z of [-2.6, 0, 2.6]) box(ss, 0.3, 0.2, 0.3, mats.woodDark, 0.0, 0.1, z);
