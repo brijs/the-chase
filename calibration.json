@@ -1,157 +1,118 @@
 {
   "version": 1,
   "params": {
-    "timing.offsetMs": -107.583357,
-    "timing.windowScale": 1.51259,
+    "timing.offsetMs": -150,
+    "timing.windowScale": 1.973587,
     "shot.straight.az": -0.064007,
-    "shot.lateCut.az": 2.621998,
+    "shot.lateCut.az": 2.514745,
     "shot.pull.az": -1.699254,
     "shot.flick.az": -1.594312,
     "shot.straight.elev": -0.034907,
     "shot.cover.elev": -0.034907,
     "shot.lateCut.elev": 0.034907,
+    "shot.pull.elev": 0.05236,
     "shot.flick.elev": -0.05236,
     "shot.sweep.elev": 0.034907,
     "shot.cover.drift": 1.05,
     "shot.cut.drift": 0.63,
+    "shot.lateCut.drift": 0.68,
     "shot.punch.drift": 1.1025,
     "shot.pull.drift": 0.562275,
     "shot.flick.drift": 0.920022,
-    "shot.straight.len.yorker": 0.65,
+    "shot.straight.len.yorker": 0.75,
     "shot.straight.len.good": 0.61,
     "shot.straight.power": 1.157625,
-    "shot.cover.len.yorker": 0.6,
+    "shot.cover.len.yorker": 0.66,
     "shot.cover.power": 1.1025,
-    "shot.lateCut.power": 0.46305,
+    "shot.cut.len.yorker": 0.12,
+    "shot.cut.len.full": 0.24,
+    "shot.cut.len.good": 0.67,
+    "shot.cut.len.bouncer": 0.56,
+    "shot.cut.line0": 0.237601,
+    "shot.cut.power": 1.134,
+    "shot.lateCut.len.full": 0.16,
+    "shot.lateCut.power": 0.536038,
+    "shot.punch.len.full": 0.36,
+    "shot.punch.len.bouncer": 0.21,
     "shot.punch.line0": -0.17,
-    "shot.punch.power": 1.009915,
+    "shot.punch.line1": 0.385,
+    "shot.punch.power": 1.060411,
     "shot.glance.len.full": 0.95,
     "shot.glance.len.good": 1,
     "shot.glance.len.short": 0.55,
+    "shot.glance.len.bouncer": 0.2,
     "shot.glance.power": 0.668528,
     "shot.pull.len.good": 0.41,
     "shot.pull.len.bouncer": 1,
-    "shot.pull.power": 1.1172,
-    "shot.flick.len.yorker": 0.46,
+    "shot.pull.power": 1.231713,
+    "shot.flick.len.yorker": 0.66,
     "shot.flick.len.full": 1,
-    "shot.flick.len.good": 0.8,
-    "shot.flick.line1": 0.01,
+    "shot.flick.len.good": 0.9,
+    "shot.flick.len.bouncer": 0.06,
+    "shot.flick.line1": 0.034578,
     "shot.flick.power": 0.893398,
-    "shot.sweep.len.yorker": 0.25,
-    "shot.sweep.power": 0.8925,
+    "shot.sweep.len.yorker": 0.71,
+    "shot.sweep.line0": -0.46,
+    "shot.sweep.power": 0.937125,
     "shot.reverseSweep.power": 0.882,
-    "shot.scoop.len.good": 0.61,
+    "shot.scoop.len.good": 0.67,
     "shot.scoop.line0": -0.185,
+    "shot.scoop.line1": 0.225,
     "edge.outside.az": 2.588456,
     "edge.outside.azHalf": 0.33275,
     "edge.outside.speed": 0.495293,
     "edge.outside.elev": 0.113446,
     "edge.inside.az": -2.67488,
     "edge.inside.azHalf": 0.3993,
-    "edge.inside.speed": 0.488669,
+    "edge.inside.speed": 0.513102,
     "edge.inside.elev": -0.07854,
     "edge.top.az": 1.906092,
-    "edge.top.speed": 12.1275,
+    "edge.top.speed": 12.733875,
     "edge.top.elev": 1.012291,
-    "k.missCoef": 0.446277,
-    "k.edgeFit": 0.239448,
-    "k.edgeTiming": 0.149654,
-    "k.loftQ": 11.845,
+    "k.missCoef": 0.294133,
+    "k.edgeFit": 0.14519,
+    "k.edgeTiming": 0.090743,
+    "k.loftQ": 12.566361,
     "k.spread": 0.358408,
-    "scale.catchSkill": 0.9409
+    "scale.catchSkill": 0.885293
   },
-  "exportedAt": "2026-11-01T11:19:25.813Z",
+  "exportedAt": "2026-11-01T13:32:53.952Z",
   "log": [
     {
-      "at": "2026-11-01T11:06:18.489Z",
+      "at": "2026-11-01T13:09:57.298Z",
       "level": "medium",
       "sample": {
-        "ball": 4,
-        "rawErr": -0.17500857396104913,
-        "err": -0.08003036696104915,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
+        "ball": 8,
+        "rawErr": -0.1731625641445408,
+        "err": -0.0655792071445408,
+        "sigma": 0.07260432,
+        "perfect": 0.03781475000000001,
+        "miss": 0.20419965000000004,
         "timing": "EARLY",
         "kind": "hit",
         "edge": "inside",
-        "fit": 0.9,
-        "shotKey": "punch",
+        "fit": 0.55,
+        "shotKey": "cut",
         "lofted": false,
         "length": "good",
-        "lenM": 5.471731602074579,
+        "lenM": 5.927731590904296,
         "line": "off",
-        "type": "inswinger",
-        "ballZ": 0.2585860121806119,
+        "type": "offbreak",
+        "ballZ": 0.2606583850855764,
         "out": null,
         "fieldType": "field",
-        "runs": 1,
+        "runs": 0,
         "q": 0.1,
-        "az": -2.784527344766045,
-        "speed": 9.280002507147262,
+        "az": -2.357523882596027,
+        "speed": 7.232558846553093,
         "spreadHalf": 0.3993,
         "driftHalf": 0,
-        "elev": -0.14624754937920337,
+        "elev": -0.06085601500704319,
         "aimAz": -2.67488,
         "driftAz": 0,
-        "scatter": -0.10964734476604487,
-        "call": "1 run",
-        "read": "Inswinger · good · off"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "edge.inside.speed",
-          "from": 0.422131,
-          "to": 0.44323755,
-          "reason": "inside edges come off too soft"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:08:16.987Z",
-      "level": "medium",
-      "sample": {
-        "ball": 16,
-        "rawErr": -0.17012738352106865,
-        "err": -0.07514917652106867,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
-        "timing": "EARLY",
-        "kind": "miss",
-        "edge": null,
-        "fit": 0.46,
-        "shotKey": "flick",
-        "lofted": false,
-        "length": "yorker",
-        "lenM": 0.7185928522609174,
-        "line": "pads",
-        "type": "yorker",
-        "ballZ": -0.1745725559030527,
-        "out": null,
-        "fieldType": null,
-        "runs": 0,
-        "q": 0,
-        "az": null,
-        "speed": null,
-        "spreadHalf": 0,
-        "driftHalf": 0,
-        "elev": null,
-        "aimAz": null,
-        "driftAz": 0,
-        "scatter": 0,
-        "call": "Pitched outside leg",
-        "read": "Yorker · yorker · pads"
+        "scatter": 0.31735611740397296,
+        "call": "No run",
+        "read": "Off-spin · Off-break · good · off"
       },
       "answers": {
         "timing": null,
@@ -165,219 +126,54 @@
       },
       "changes": [
         {
-          "id": "k.missCoef",
-          "from": 0.527265,
-          "to": 0.4850838,
-          "reason": "too harsh: beaten"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:09:50.519Z",
-      "level": "medium",
-      "sample": {
-        "ball": 25,
-        "rawErr": -0.13215867499457462,
-        "err": -0.03718046799457461,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
-        "timing": "EARLY",
-        "kind": "hit",
-        "edge": null,
-        "fit": 0.7,
-        "shotKey": "lateCut",
-        "lofted": false,
-        "length": "good",
-        "lenM": 5.007634982815944,
-        "line": "off",
-        "type": "outswinger",
-        "ballZ": 0.26473868776811327,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
-        "q": 0.598136383256346,
-        "az": 2.3605849085523665,
-        "speed": 13.399816354802807,
-        "spreadHalf": 0.42527630209847805,
-        "driftHalf": 0.31680054610285713,
-        "elev": -0.010946560829304855,
-        "aimAz": 2.621998,
-        "driftAz": -0.1670996461584739,
-        "scatter": -0.09431344528915965,
-        "call": "1 run",
-        "read": "Outswinger · good · off"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "shot.lateCut.power",
-          "from": 0.441,
-          "to": 0.46305,
-          "reason": "came off too soft"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:10:56.244Z",
-      "level": "medium",
-      "sample": {
-        "ball": 30,
-        "rawErr": -0.14135430965038182,
-        "err": -0.046376102650381834,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
-        "timing": "EARLY",
-        "kind": "hit",
-        "edge": null,
-        "fit": 0.2,
-        "shotKey": "sweep",
-        "lofted": false,
-        "length": "yorker",
-        "lenM": 1.260141713824123,
-        "line": "stumps",
-        "type": "yorker",
-        "ballZ": 0.0016593730557729752,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
-        "q": 0.18189074092075116,
-        "az": -1.7282525775258522,
-        "speed": 9.969106946739577,
-        "spreadHalf": 0.5466886014738731,
-        "driftHalf": 0.3772252656479999,
-        "elev": 0.04780977790353784,
-        "aimAz": -1.7453292519943295,
-        "driftAz": -0.35454530476216906,
-        "scatter": 0.3716219792306463,
-        "call": "1 run",
-        "read": "Yorker · yorker · stumps"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": -1,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "shot.sweep.len.yorker",
-          "from": 0.2,
-          "to": 0.25,
-          "reason": "too harsh: shot vs this length"
+          "id": "k.edgeTiming",
+          "from": 0.149654,
+          "to": 0.13768168,
+          "reason": "too harsh: inside edge"
         },
         {
-          "id": "shot.sweep.power",
-          "from": 0.85,
-          "to": 0.8925,
-          "reason": "came off too soft"
+          "id": "k.edgeFit",
+          "from": 0.239448,
+          "to": 0.22029216000000001,
+          "reason": "too harsh: inside edge"
         }
       ]
     },
     {
-      "at": "2026-11-01T11:11:23.911Z",
+      "at": "2026-11-01T13:10:54.972Z",
       "level": "medium",
       "sample": {
-        "ball": 32,
-        "rawErr": -0.1663640875519074,
-        "err": -0.0713858805519074,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
-        "timing": "EARLY",
+        "ball": 12,
+        "rawErr": -0.23959515757475802,
+        "err": -0.13201180057475803,
+        "sigma": 0.07260432,
+        "perfect": 0.03781475000000001,
+        "miss": 0.20419965000000004,
+        "timing": "VERY EARLY",
         "kind": "hit",
         "edge": "inside",
-        "fit": 0.1,
-        "shotKey": "lateCut",
+        "fit": 0.55,
+        "shotKey": "cut",
         "lofted": false,
-        "length": "full",
-        "lenM": 3.577469026041217,
+        "length": "good",
+        "lenM": 5.124614162207582,
         "line": "off",
-        "type": "straight",
-        "ballZ": 0.24728366472644003,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
+        "type": "offbreak",
+        "ballZ": 0.35242647089979845,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
         "q": 0.1,
-        "az": -2.7318433744947144,
-        "speed": 11.306409882441304,
+        "az": -2.884513230515383,
+        "speed": 8.7991153544466,
         "spreadHalf": 0.3993,
         "driftHalf": 0,
-        "elev": -0.14277945037724504,
+        "elev": -0.03486892721938426,
         "aimAz": -2.67488,
         "driftAz": 0,
-        "scatter": -0.05696337449471445,
-        "call": "1 run",
-        "read": "Straight ball · full · off"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "edge.inside.speed",
-          "from": 0.44323755,
-          "to": 0.4653994275,
-          "reason": "inside edges come off too soft"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:12:42.535Z",
-      "level": "medium",
-      "sample": {
-        "ball": 37,
-        "rawErr": -0.14539880768897812,
-        "err": -0.050420600688978134,
-        "sigma": 0.070489632,
-        "perfect": 0.03671335,
-        "miss": 0.19825209000000002,
-        "timing": "EARLY",
-        "kind": "miss",
-        "edge": null,
-        "fit": 0.1,
-        "shotKey": "reverseSweep",
-        "lofted": false,
-        "length": "yorker",
-        "lenM": 0.35,
-        "line": "off",
-        "type": "yorker",
-        "ballZ": 0.08578096889938915,
-        "out": null,
-        "fieldType": null,
-        "runs": 0,
-        "q": 0,
-        "az": null,
-        "speed": null,
-        "spreadHalf": 0,
-        "driftHalf": 0,
-        "elev": null,
-        "aimAz": null,
-        "driftAz": 0,
-        "scatter": 0,
-        "call": "NOT OUT · close!",
-        "read": "Yorker · yorker · off"
+        "scatter": -0.20963323051538296,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Carrom ball · good · off"
       },
       "answers": {
         "timing": 0,
@@ -392,149 +188,94 @@
       "changes": [
         {
           "id": "timing.offsetMs",
-          "from": -94.978207,
-          "to": -107.58335717224452,
-          "reason": "you felt right at -145 ms raw"
+          "from": -107.583357,
+          "to": -140.5863071436895,
+          "reason": "you felt right at -240 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:12:03.038Z",
+      "level": "medium",
+      "sample": {
+        "ball": 18,
+        "rawErr": -0.2232227302894573,
+        "err": -0.0826364231457678,
+        "sigma": 0.07260432,
+        "perfect": 0.03781475000000001,
+        "miss": 0.20419965000000004,
+        "timing": "EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.9218420213582335,
+        "shotKey": "cut",
+        "lofted": false,
+        "length": "short",
+        "lenM": 8.295975620951504,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.221242085125976,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.25879824223758324,
+        "az": 1.4132417231925425,
+        "speed": 14.75103782909862,
+        "spreadHalf": 0.3380231414806078,
+        "driftHalf": 0.1617261228,
+        "elev": -0.004019270154988895,
+        "aimAz": 1.53588974175501,
+        "driftAz": -0.1840726325571978,
+        "scatter": 0.06142461399473037,
+        "call": "1 run",
+        "read": "Off-spin · Carrom ball · short · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -140.5863071436895,
+          "to": -150,
+          "reason": "you felt right at -223 ms raw"
         },
         {
           "id": "timing.windowScale",
-          "from": 1.468534,
-          "to": 1.51259002,
+          "from": 1.51259,
+          "to": 1.5579677,
           "reason": "called it right, the game said early"
         }
       ]
     },
     {
-      "at": "2026-11-01T11:14:33.085Z",
+      "at": "2026-11-01T13:13:00.622Z",
       "level": "medium",
       "sample": {
-        "ball": 43,
-        "rawErr": -0.08139760137431537,
-        "err": 0.026185755797929144,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "LATE",
-        "kind": "hit",
-        "edge": null,
-        "fit": 0.85,
-        "shotKey": "reverseSweep",
-        "lofted": false,
-        "length": "full",
-        "lenM": 3.0717488682828846,
-        "line": "stumps",
-        "type": "slower",
-        "ballZ": 0.000026312359491381665,
-        "out": null,
-        "fieldType": "field",
-        "runs": 0,
-        "q": 0.6235910234796715,
-        "az": 1.8672194025707343,
-        "speed": 14.683092281756059,
-        "spreadHalf": 0.30902300356263557,
-        "driftHalf": 0.25396991471807995,
-        "elev": -0.03712172724062523,
-        "aimAz": 1.9547687622336491,
-        "driftAz": 0.1526629563019269,
-        "scatter": -0.2402123159648418,
-        "call": "No run",
-        "read": "Slower ball · full · stumps"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "shot.reverseSweep.power",
-          "from": 0.8,
-          "to": 0.8400000000000001,
-          "reason": "came off too soft"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:14:59.101Z",
-      "level": "medium",
-      "sample": {
-        "ball": 45,
-        "rawErr": -0.05134841083676209,
-        "err": 0.05623494633548243,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "LATE",
-        "kind": "hit",
-        "edge": null,
-        "fit": 1,
-        "shotKey": "flick",
-        "lofted": true,
-        "length": "full",
-        "lenM": 2.896631023613736,
-        "line": "stumps",
-        "type": "outswinger",
-        "ballZ": 0.0025137701792305525,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
-        "q": 0.5488598692746698,
-        "az": -1.400606744173338,
-        "speed": 9.419833593612006,
-        "spreadHalf": 0.4322494087757037,
-        "driftHalf": 0.36738664918043606,
-        "elev": 0.3203721594799509,
-        "aimAz": -1.594312,
-        "driftAz": 0.2845556328860476,
-        "scatter": -0.09085037705938588,
-        "call": "1 run",
-        "read": "Inswinger · full · stumps"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "shot.flick.power",
-          "from": 0.850855,
-          "to": 0.8933977500000001,
-          "reason": "came off too soft"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:15:17.759Z",
-      "level": "medium",
-      "sample": {
-        "ball": 47,
-        "rawErr": -0.058852381099479406,
-        "err": 0.04873097607276511,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "LATE",
+        "ball": 21,
+        "rawErr": -0.3907900921738541,
+        "err": -0.24079009217385405,
+        "sigma": 0.07478244960000001,
+        "perfect": 0.03894919250000001,
+        "miss": 0.21032563950000002,
+        "timing": "VERY EARLY",
         "kind": "miss",
         "edge": null,
-        "fit": 0.85,
-        "shotKey": "reverseSweep",
-        "lofted": false,
-        "length": "good",
-        "lenM": 4.579745941446163,
-        "line": "off",
-        "type": "offcutter",
-        "ballZ": 0.25925850082027,
+        "fit": 0.5,
+        "shotKey": "cut",
+        "lofted": true,
+        "length": "bouncer",
+        "lenM": 10.104034952586517,
+        "line": "wide",
+        "type": "offbreak",
+        "ballZ": 0.3855491687461211,
         "out": null,
         "fieldType": null,
         "runs": 0,
@@ -547,8 +288,744 @@
         "aimAz": null,
         "driftAz": 0,
         "scatter": 0,
-        "call": "Played and missed",
-        "read": "Off-cutter · good · off"
+        "call": "NOT OUT · overturned on review",
+        "read": "Off-spin · Off-break · bouncer · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [],
+        "good": [
+          "cut"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.cut.len.bouncer",
+          "from": 0.5,
+          "to": 0.56,
+          "reason": "you marked cut OK for a bouncer ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:14:07.488Z",
+      "level": "medium",
+      "sample": {
+        "ball": 25,
+        "rawErr": -0.1465857217756091,
+        "err": 0.0034142782243908876,
+        "sigma": 0.07478244960000001,
+        "perfect": 0.03894919250000001,
+        "miss": 0.21032563950000002,
+        "timing": "PERFECT",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.55,
+        "shotKey": "cut",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.25735847495962,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.24310259837176218,
+        "out": "bowled",
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "BOWLED",
+        "read": "Off-spin · Off-break · good · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "cut",
+          "lateCut",
+          "reverseSweep",
+          "scoop"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -150,
+          "to": -149.14643044390226,
+          "reason": "you felt right at -147 ms raw"
+        },
+        {
+          "id": "k.missCoef",
+          "from": 0.446277,
+          "to": 0.41057484,
+          "reason": "too harsh: beaten"
+        },
+        {
+          "id": "shot.cut.len.good",
+          "from": 0.55,
+          "to": 0.6100000000000001,
+          "reason": "you marked cut OK for a good ball"
+        },
+        {
+          "id": "shot.scoop.len.good",
+          "from": 0.61,
+          "to": 0.6699999999999999,
+          "reason": "you marked scoop OK for a good ball"
+        },
+        {
+          "id": "shot.scoop.line1",
+          "from": 0.2,
+          "to": 0.225,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:14:26.531Z",
+      "level": "medium",
+      "sample": {
+        "ball": 26,
+        "rawErr": -0.33537339746333183,
+        "err": -0.18622696701942953,
+        "sigma": 0.07478244960000001,
+        "perfect": 0.03894919250000001,
+        "miss": 0.21032563950000002,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0,
+        "shotKey": "cut",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.3558327258797362,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.5670963761968296,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Wrong shot, beaten",
+        "read": "Off-spin · Off-break · yorker · off"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [],
+        "good": [
+          "cut"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.cut.len.yorker",
+          "from": 0,
+          "to": 0.06,
+          "reason": "you marked cut OK for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:15:37.964Z",
+      "level": "medium",
+      "sample": {
+        "ball": 32,
+        "rawErr": -0.24326367204003735,
+        "err": -0.09411724159613508,
+        "sigma": 0.07478244960000001,
+        "perfect": 0.03894919250000001,
+        "miss": 0.21032563950000002,
+        "timing": "VERY EARLY",
+        "kind": "hit",
+        "edge": "inside",
+        "fit": 0.7,
+        "shotKey": "lateCut",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.006833751220256,
+        "line": "wide",
+        "type": "offbreak",
+        "ballZ": 0.4679785603028971,
+        "out": null,
+        "fieldType": "field",
+        "runs": 0,
+        "q": 0.1,
+        "az": -2.4820181217518353,
+        "speed": 8.044915508652855,
+        "spreadHalf": 0.3993,
+        "driftHalf": 0,
+        "elev": -0.06766250817051836,
+        "aimAz": -2.67488,
+        "driftAz": 0,
+        "scatter": 0.1928618782481646,
+        "call": "No run",
+        "read": "Off-spin · Off-break · good · wide"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "lateCut",
+          "cut",
+          "punch"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -149.14643044390226,
+          "to": -150,
+          "reason": "you felt right at -243 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.5579677,
+          "to": 1.604706731,
+          "reason": "called it right, the game said very early"
+        },
+        {
+          "id": "k.edgeTiming",
+          "from": 0.13768168,
+          "to": 0.1266671456,
+          "reason": "too harsh: inside edge"
+        },
+        {
+          "id": "k.edgeFit",
+          "from": 0.22029216000000001,
+          "to": 0.20266878720000003,
+          "reason": "too harsh: inside edge"
+        },
+        {
+          "id": "edge.inside.speed",
+          "from": 0.488669,
+          "to": 0.51310245,
+          "reason": "inside edges come off too soft"
+        },
+        {
+          "id": "shot.cut.len.good",
+          "from": 0.6100000000000001,
+          "to": 0.6700000000000002,
+          "reason": "you marked cut OK for a good ball"
+        },
+        {
+          "id": "shot.punch.line1",
+          "from": 0.36,
+          "to": 0.385,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:16:04.390Z",
+      "level": "medium",
+      "sample": {
+        "ball": 34,
+        "rawErr": -0.13284717737348192,
+        "err": 0.01715282262651807,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "PERFECT",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.11880030772826891,
+        "shotKey": "cut",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.0565213243244216,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.23760061545653782,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Wrong shot, beaten",
+        "read": "Off-spin · Off-break · full · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "cut"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -150,
+          "to": -145.71179434337049,
+          "reason": "you felt right at -133 ms raw"
+        },
+        {
+          "id": "shot.cut.len.full",
+          "from": 0.12,
+          "to": 0.2,
+          "reason": "too harsh: beaten with a shot the game thought wrong"
+        },
+        {
+          "id": "shot.cut.line0",
+          "from": 0.24,
+          "to": 0.23760061545653782,
+          "reason": "line band toward the ball"
+        },
+        {
+          "id": "shot.cut.len.full",
+          "from": 0.2,
+          "to": 0.18,
+          "reason": "you marked cut OK for a full ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:16:25.523Z",
+      "level": "medium",
+      "sample": {
+        "ball": 35,
+        "rawErr": -0.28559289394570064,
+        "err": -0.1398810996023302,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.06,
+        "shotKey": "cut",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.2760810944251717,
+        "line": "wide",
+        "type": "offbreak",
+        "ballZ": 0.5193902888753529,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Wrong shot, beaten",
+        "read": "Off-spin · Carrom ball · yorker · wide"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "cut"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.cut.len.yorker",
+          "from": 0.06,
+          "to": 0.14,
+          "reason": "too harsh: beaten with a shot the game thought wrong"
+        },
+        {
+          "id": "shot.cut.len.yorker",
+          "from": 0.14,
+          "to": 0.12,
+          "reason": "you marked cut OK for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:16:59.774Z",
+      "level": "medium",
+      "sample": {
+        "ball": 37,
+        "rawErr": -0.30652321815788064,
+        "err": -0.16081142381451016,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "VERY EARLY",
+        "kind": "hit",
+        "edge": "inside",
+        "fit": 0.7,
+        "shotKey": "lateCut",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.452550213225186,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.3103383417688823,
+        "out": null,
+        "fieldType": "drop",
+        "runs": 0,
+        "q": 0.1,
+        "az": -2.933403423064081,
+        "speed": 9.462705916642458,
+        "spreadHalf": 0.3993,
+        "driftHalf": 0,
+        "elev": -0.12998201663161896,
+        "aimAz": -2.67488,
+        "driftAz": 0,
+        "scatter": -0.25852342306408094,
+        "call": "DROPPED · the keeper",
+        "read": "Off-spin · Carrom ball · good · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "lateCut"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -145.71179434337049,
+          "to": -150,
+          "reason": "you felt right at -307 ms raw"
+        },
+        {
+          "id": "k.edgeTiming",
+          "from": 0.1266671456,
+          "to": 0.11653377395200001,
+          "reason": "too harsh: inside edge"
+        },
+        {
+          "id": "k.edgeFit",
+          "from": 0.20266878720000003,
+          "to": 0.18645528422400004,
+          "reason": "too harsh: inside edge"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:18:05.869Z",
+      "level": "medium",
+      "sample": {
+        "ball": 42,
+        "rawErr": -0.37605910618421423,
+        "err": -0.2260591061842142,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "bouncer",
+        "lenM": 10.435458797845058,
+        "line": "stumps",
+        "type": "offbreak",
+        "ballZ": -0.01812437160654279,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Carrom ball · bouncer · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "k.missCoef",
+          "from": 0.41057484,
+          "to": 0.3777288528,
+          "reason": "too harsh: beaten"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:18:34.802Z",
+      "level": "medium",
+      "sample": {
+        "ball": 44,
+        "rawErr": -0.28922472247639885,
+        "err": -0.13922472247639883,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "VERY EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "cut",
+        "lofted": true,
+        "length": "short",
+        "lenM": 8.364621509984136,
+        "line": "wide",
+        "type": "offbreak",
+        "ballZ": 0.5952430102625159,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.03811781768276896,
+        "az": 1.2373351008745217,
+        "speed": 6.599053315480644,
+        "spreadHalf": 0.35393455363740406,
+        "driftHalf": 0.158230502503524,
+        "elev": 1.0752833290332164,
+        "aimAz": 1.53588974175501,
+        "driftAz": -0.2860023861471423,
+        "scatter": -0.012552254733345836,
+        "call": "1 run",
+        "read": "Off-spin · Off-break · short · wide"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.cut.power",
+          "from": 1.08,
+          "to": 1.1340000000000001,
+          "reason": "came off too soft"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:19:23.369Z",
+      "level": "medium",
+      "sample": {
+        "ball": 48,
+        "rawErr": -0.21072096519652525,
+        "err": -0.060720965196525256,
+        "sigma": 0.077025923088,
+        "perfect": 0.040117668275000004,
+        "miss": 0.21663540868500003,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.85,
+        "shotKey": "reverseSweep",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.491475873533637,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.24036973716336973,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Carrom ball · good · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "reverseSweep"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.windowScale",
+          "from": 1.604706731,
+          "to": 1.65284793293,
+          "reason": "called it right, the game said very early"
+        },
+        {
+          "id": "k.missCoef",
+          "from": 0.3777288528,
+          "to": 0.347510544576,
+          "reason": "too harsh: beaten"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:20:48.858Z",
+      "level": "medium",
+      "sample": {
+        "ball": 56,
+        "rawErr": -0.15745108352325252,
+        "err": -0.007451083523252522,
+        "sigma": 0.07933670078064001,
+        "perfect": 0.04132119832325001,
+        "miss": 0.22313447094555003,
+        "timing": "PERFECT",
+        "kind": "playedOn",
+        "edge": null,
+        "fit": 0.6,
+        "shotKey": "cover",
+        "lofted": true,
+        "length": "yorker",
+        "lenM": 1.24430403446313,
+        "line": "stumps",
+        "type": "offbreak",
+        "ballZ": 0.40449115530037455,
+        "out": "bowled",
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "PLAYED ON",
+        "read": "Off-spin · Off-break · yorker · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "cover"
+        ],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "k.missCoef",
+          "from": 0.347510544576,
+          "to": 0.31970970100992,
+          "reason": "too harsh: beaten"
+        },
+        {
+          "id": "shot.cover.len.yorker",
+          "from": 0.6,
+          "to": 0.6599999999999999,
+          "reason": "you marked cover OK for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:21:04.253Z",
+      "level": "medium",
+      "sample": {
+        "ball": 57,
+        "rawErr": -0.09259759583998925,
+        "err": 0.057402404160010745,
+        "sigma": 0.07933670078064001,
+        "perfect": 0.04132119832325001,
+        "miss": 0.22313447094555003,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": "outside",
+        "fit": 0.3,
+        "shotKey": "punch",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.5104938106611367,
+        "line": "stumps",
+        "type": "offbreak",
+        "ballZ": 0.11562754022810826,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0.1,
+        "az": 2.6997032248672275,
+        "speed": 9.069790767757436,
+        "spreadHalf": 0.33275,
+        "driftHalf": 0,
+        "elev": 0.11391152701164005,
+        "aimAz": 2.588456,
+        "driftAz": 0,
+        "scatter": 0.1112472248672276,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Off-break · full · stumps"
       },
       "answers": {
         "timing": null,
@@ -562,109 +1039,64 @@
       },
       "changes": [
         {
-          "id": "k.missCoef",
-          "from": 0.4850838,
-          "to": 0.44627709600000004,
-          "reason": "too harsh: beaten"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:15:31.759Z",
-      "level": "medium",
-      "sample": {
-        "ball": 48,
-        "rawErr": -0.15313577427269007,
-        "err": -0.04555241710044555,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "EARLY",
-        "kind": "hit",
-        "edge": "inside",
-        "fit": 0.85,
-        "shotKey": "reverseSweep",
-        "lofted": false,
-        "length": "full",
-        "lenM": 2.616082013514824,
-        "line": "stumps",
-        "type": "outswinger",
-        "ballZ": 0.07632707725603001,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
-        "q": 0.1,
-        "az": -2.6690004392777755,
-        "speed": 10.213976787361275,
-        "spreadHalf": 0.3993,
-        "driftHalf": 0,
-        "elev": -0.11463869343376398,
-        "aimAz": -2.67488,
-        "driftAz": 0,
-        "scatter": 0.005879560722224397,
-        "call": "1 run",
-        "read": "Outswinger · full · stumps"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": null,
-        "spread": null
-      },
-      "changes": [
+          "id": "k.edgeTiming",
+          "from": 0.11653377395200001,
+          "to": 0.10721107203584002,
+          "reason": "too harsh: outside edge"
+        },
         {
-          "id": "edge.inside.speed",
-          "from": 0.4653994275,
-          "to": 0.48866939887500005,
-          "reason": "inside edges come off too soft"
+          "id": "k.edgeFit",
+          "from": 0.18645528422400004,
+          "to": 0.17153886148608005,
+          "reason": "too harsh: outside edge"
         }
       ]
     },
     {
-      "at": "2026-11-01T11:16:39.392Z",
+      "at": "2026-11-01T13:21:51.753Z",
       "level": "medium",
       "sample": {
-        "ball": 52,
-        "rawErr": -0.05862757505287805,
-        "err": 0.048955782119366464,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "LATE",
+        "ball": 58,
+        "rawErr": -0.2731340879429598,
+        "err": -0.12313408794295977,
+        "sigma": 0.07933670078064001,
+        "perfect": 0.04132119832325001,
+        "miss": 0.22313447094555003,
+        "timing": "VERY EARLY",
         "kind": "hit",
         "edge": null,
-        "fit": 0.85,
-        "shotKey": "reverseSweep",
-        "lofted": false,
-        "length": "good",
-        "lenM": 6.465719043067657,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "short",
+        "lenM": 8.16234552692622,
         "line": "stumps",
-        "type": "outswinger",
-        "ballZ": 0.10567831802600675,
-        "out": null,
-        "fieldType": "field",
-        "runs": 1,
-        "q": 0.2531266673627346,
-        "az": 2.4776406200351144,
-        "speed": 10.749396008770455,
-        "spreadHalf": 0.5125677185302293,
-        "driftHalf": 0.32584819246847996,
-        "elev": 0.009508622770463836,
-        "aimAz": 1.9547687622336491,
-        "driftAz": 0.36618925025286114,
-        "scatter": 0.15668260754860433,
-        "call": "1 run",
-        "read": "Outswinger · good · stumps"
+        "type": "offbreak",
+        "ballZ": 0.09120044271194366,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0.08991935680867043,
+        "az": -2.0070452268884114,
+        "speed": 7.388465589618474,
+        "spreadHalf": 0.3730426488311312,
+        "driftHalf": 0.1577248321325715,
+        "elev": 1.11959781031749,
+        "aimAz": -1.699254,
+        "driftAz": -0.2447959539469515,
+        "scatter": -0.06299527294145989,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Off-break · short · stumps"
       },
       "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [
+          "pull"
+        ],
+        "good": [
+          "punch"
+        ],
         "dir": null,
         "power": -1,
         "height": null,
@@ -672,115 +1104,74 @@
       },
       "changes": [
         {
-          "id": "shot.reverseSweep.power",
-          "from": 0.8400000000000001,
-          "to": 0.8820000000000001,
+          "id": "timing.windowScale",
+          "from": 1.65284793293,
+          "to": 1.7024333709179,
+          "reason": "called it right, the game said very early"
+        },
+        {
+          "id": "scale.catchSkill",
+          "from": 0.9409,
+          "to": 0.912673,
+          "reason": "too harsh: caught"
+        },
+        {
+          "id": "k.loftQ",
+          "from": 11.845,
+          "to": 12.20035,
+          "reason": "too harsh: lofted and caught"
+        },
+        {
+          "id": "shot.pull.power",
+          "from": 1.1172,
+          "to": 1.17306,
           "reason": "came off too soft"
         }
       ]
     },
     {
-      "at": "2026-11-01T11:17:07.256Z",
+      "at": "2026-11-01T13:22:33.966Z",
       "level": "medium",
       "sample": {
-        "ball": 54,
-        "rawErr": -0.1539769000337566,
-        "err": -0.046393542861512094,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
+        "ball": 61,
+        "rawErr": -0.22952983286877301,
+        "err": -0.07952983286877302,
+        "sigma": 0.0817168018040592,
+        "perfect": 0.042560834272947504,
+        "miss": 0.22982850507391653,
         "timing": "EARLY",
         "kind": "hit",
-        "edge": "top",
-        "fit": 0.85,
-        "shotKey": "reverseSweep",
+        "edge": null,
+        "fit": 0.9,
+        "shotKey": "punch",
         "lofted": false,
-        "length": "full",
-        "lenM": 3.1271436686627565,
-        "line": "off",
-        "type": "outswinger",
-        "ballZ": 0.15292825378145003,
+        "length": "short",
+        "lenM": 7.151182883954607,
+        "line": "stumps",
+        "type": "offbreak",
+        "ballZ": 0.13135504194656694,
         "out": null,
         "fieldType": "field",
         "runs": 1,
-        "q": 0.1,
-        "az": 2.2306167886516155,
-        "speed": 8.077877018135041,
-        "spreadHalf": 1.1,
-        "driftHalf": 0,
-        "elev": 1.0876389249450595,
-        "aimAz": 1.906092,
-        "driftAz": 0,
-        "scatter": 0.3245247886516156,
+        "q": 0.360680997139871,
+        "az": 0.06217951083332955,
+        "speed": 15.645863686077229,
+        "spreadHalf": 0.29929091397176877,
+        "driftHalf": 0.30084551314175667,
+        "elev": 0.009668876050862555,
+        "aimAz": 0.3141592653589793,
+        "driftAz": -0.29279405032094213,
+        "scatter": 0.040814295795292374,
         "call": "1 run",
-        "read": "Outswinger · full · off"
+        "read": "Off-spin · Off-break · short · stumps"
       },
       "answers": {
-        "timing": null,
+        "timing": 0,
         "outcome": null,
         "ideal": [],
-        "good": [],
-        "dir": null,
-        "power": -1,
-        "height": 1,
-        "spread": null
-      },
-      "changes": [
-        {
-          "id": "edge.top.speed",
-          "from": 11,
-          "to": 11.55,
-          "reason": "top edges come off too soft"
-        },
-        {
-          "id": "edge.top.elev",
-          "from": 1.064651,
-          "to": 1.01229112244017,
-          "reason": "top edges fly too high"
-        }
-      ]
-    },
-    {
-      "at": "2026-11-01T11:18:04.914Z",
-      "level": "medium",
-      "sample": {
-        "ball": 58,
-        "rawErr": -0.1973934929063785,
-        "err": -0.08981013573413399,
-        "sigma": 0.07260432096,
-        "perfect": 0.0378147505,
-        "miss": 0.2041996527,
-        "timing": "EARLY",
-        "kind": "hit",
-        "edge": "top",
-        "fit": 0,
-        "shotKey": "pull",
-        "lofted": true,
-        "length": "bouncer",
-        "lenM": 10.280502199637704,
-        "line": "pads",
-        "type": "bouncer",
-        "ballZ": -0.7671973677792382,
-        "out": null,
-        "fieldType": "drop",
-        "runs": 0,
-        "q": 0.1,
-        "az": -0.9120573875883666,
-        "speed": 11.432104282267392,
-        "spreadHalf": 1.1,
-        "driftHalf": 0,
-        "elev": 0.9760917009889656,
-        "aimAz": -1.906092,
-        "driftAz": 0,
-        "scatter": 0.9940346124116333,
-        "call": "DROPPED · Midwicket",
-        "read": "Bouncer · bouncer · off"
-      },
-      "answers": {
-        "timing": null,
-        "outcome": null,
-        "ideal": [],
-        "good": [],
+        "good": [
+          "punch"
+        ],
         "dir": null,
         "power": -1,
         "height": null,
@@ -788,10 +1179,970 @@
       },
       "changes": [
         {
+          "id": "timing.windowScale",
+          "from": 1.7024333709179,
+          "to": 1.7535063720454371,
+          "reason": "called it right, the game said early"
+        },
+        {
+          "id": "shot.punch.power",
+          "from": 1.009915,
+          "to": 1.06041075,
+          "reason": "came off too soft"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:23:07.978Z",
+      "level": "medium",
+      "sample": {
+        "ball": 63,
+        "rawErr": -0.15356080747608222,
+        "err": -0.0035608074760822284,
+        "sigma": 0.08416830585818098,
+        "perfect": 0.04383765930113593,
+        "miss": 0.23672336022613402,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": "top",
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "short",
+        "lenM": 8.27042416795157,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.2096640672342635,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0.1,
+        "az": -2.497843506086439,
+        "speed": 9.327523429468274,
+        "spreadHalf": 1.1,
+        "driftHalf": 0,
+        "elev": 0.9746737614293073,
+        "aimAz": -1.906092,
+        "driftAz": 0,
+        "scatter": -0.5917515060864391,
+        "call": "CAUGHT BEHIND",
+        "read": "Off-spin · Off-break · short · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "pull"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "k.edgeTiming",
+          "from": 0.10721107203584002,
+          "to": 0.09863418627297282,
+          "reason": "too harsh: top edge"
+        },
+        {
+          "id": "k.edgeFit",
+          "from": 0.17153886148608005,
+          "to": 0.15781575256719366,
+          "reason": "too harsh: top edge"
+        },
+        {
           "id": "edge.top.speed",
-          "from": 11.55,
-          "to": 12.127500000000001,
+          "from": 12.1275,
+          "to": 12.733875,
           "reason": "top edges come off too soft"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:24:14.565Z",
+      "level": "medium",
+      "sample": {
+        "ball": 70,
+        "rawErr": -0.1304244757425594,
+        "err": 0.019575524257440607,
+        "sigma": 0.08416830585818098,
+        "perfect": 0.04383765930113593,
+        "miss": 0.23672336022613402,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.1,
+        "shotKey": "lateCut",
+        "lofted": false,
+        "length": "full",
+        "lenM": 3.5786061733728274,
+        "line": "off",
+        "type": "offbreak",
+        "ballZ": 0.3198625390584311,
+        "out": null,
+        "fieldType": "field",
+        "runs": 0,
+        "q": 0.3505177790503189,
+        "az": 2.685216865646861,
+        "speed": 9.018230492499457,
+        "spreadHalf": 0.3048258091835051,
+        "driftHalf": 0.22749490669096917,
+        "elev": -0.0015944952767124737,
+        "aimAz": 2.621998,
+        "driftAz": 0.05290984556439661,
+        "scatter": 0.010309020082463998,
+        "call": "No run",
+        "read": "Off-spin · Carrom ball · full · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "lateCut",
+          "punch",
+          "cut"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -150,
+          "to": -145.10611893563984,
+          "reason": "you felt right at -130 ms raw"
+        },
+        {
+          "id": "shot.lateCut.len.full",
+          "from": 0.1,
+          "to": 0.15000000000000002,
+          "reason": "too harsh: shot vs this length"
+        },
+        {
+          "id": "shot.lateCut.power",
+          "from": 0.46305,
+          "to": 0.48620250000000004,
+          "reason": "came off too soft"
+        },
+        {
+          "id": "shot.lateCut.len.full",
+          "from": 0.15000000000000002,
+          "to": 0.16,
+          "reason": "you marked lateCut OK for a full ball"
+        },
+        {
+          "id": "shot.punch.len.full",
+          "from": 0.3,
+          "to": 0.36,
+          "reason": "you marked punch OK for a full ball"
+        },
+        {
+          "id": "shot.cut.len.full",
+          "from": 0.18,
+          "to": 0.24,
+          "reason": "you marked cut OK for a full ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:25:14.127Z",
+      "level": "medium",
+      "sample": {
+        "ball": 74,
+        "rawErr": -0.0937883021560115,
+        "err": 0.05131781677962835,
+        "sigma": 0.08416830585818098,
+        "perfect": 0.04383765930113593,
+        "miss": 0.23672336022613402,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.7,
+        "shotKey": "lateCut",
+        "lofted": false,
+        "length": "good",
+        "lenM": 5.373652771627531,
+        "line": "stumps",
+        "type": "offbreak",
+        "ballZ": 0.1836304024257791,
+        "out": null,
+        "fieldType": "drop",
+        "runs": 0,
+        "q": 0.5447315204581483,
+        "az": 2.7675003928489073,
+        "speed": 12.280772945198887,
+        "spreadHalf": 0.27873069344618945,
+        "driftHalf": 0.23807606514171195,
+        "elev": -0.04622640564603874,
+        "aimAz": 2.621998,
+        "driftAz": 0.14515611031952022,
+        "scatter": 0.0003462825293867351,
+        "call": "DROPPED · the keeper",
+        "read": "Off-spin · Off-break · good · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [],
+        "good": [],
+        "dir": 2.3163702957139756,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -145.10611893563984,
+          "to": -132.27666474073277,
+          "reason": "you felt right at -94 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.7535063720454371,
+          "to": 1.8061115632068003,
+          "reason": "called it right, the game said late"
+        },
+        {
+          "id": "shot.lateCut.power",
+          "from": 0.48620250000000004,
+          "to": 0.510512625,
+          "reason": "came off too soft"
+        },
+        {
+          "id": "shot.lateCut.drift",
+          "from": 0.8,
+          "to": 0.68,
+          "reason": "timing felt right but drag pulled it 8° off"
+        },
+        {
+          "id": "shot.lateCut.az",
+          "from": 2.621998,
+          "to": 2.514745400485596,
+          "reason": "aim should be 25° more to the leg side"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:25:54.948Z",
+      "level": "medium",
+      "sample": {
+        "ball": 77,
+        "rawErr": -0.14058721178386227,
+        "err": -0.008310547043129501,
+        "sigma": 0.08669335503392642,
+        "perfect": 0.04515278908017001,
+        "miss": 0.24382506103291807,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.25,
+        "shotKey": "sweep",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.5880764618283136,
+        "line": "stumps",
+        "type": "legbreak",
+        "ballZ": -0.3971795234453628,
+        "out": null,
+        "fieldType": "field",
+        "runs": 0,
+        "q": 0.4661749100528934,
+        "az": -1.785976488813604,
+        "speed": 15.52159992999973,
+        "spreadHalf": 0.2622404940308493,
+        "driftHalf": 0.2670155335044933,
+        "elev": 0.002609882259091041,
+        "aimAz": -1.7453292519943295,
+        "driftAz": -0.0365664069897698,
+        "scatter": -0.004080829829504843,
+        "call": "No run",
+        "read": "Leg-spin · Leg-break · yorker · stumps"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": null,
+        "ideal": [],
+        "good": [
+          "sweep"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.sweep.power",
+          "from": 0.8925,
+          "to": 0.937125,
+          "reason": "came off too soft"
+        },
+        {
+          "id": "shot.sweep.len.yorker",
+          "from": 0.25,
+          "to": 0.31,
+          "reason": "you marked sweep OK for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:26:10.977Z",
+      "level": "medium",
+      "sample": {
+        "ball": 78,
+        "rawErr": -0.3904816508609562,
+        "err": -0.25820498612022347,
+        "sigma": 0.08669335503392642,
+        "perfect": 0.04515278908017001,
+        "miss": 0.24382506103291807,
+        "timing": "VERY EARLY",
+        "kind": "miss",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": false,
+        "length": "bouncer",
+        "lenM": 10.864819336868822,
+        "line": "off",
+        "type": "legbreak",
+        "ballZ": 0.2654253554515633,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Beaten",
+        "read": "Leg-spin · Leg-break · bouncer · off"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [
+          "pull"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "k.missCoef",
+          "from": 0.31970970100992,
+          "to": 0.29413292492912646,
+          "reason": "too harsh: beaten"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:27:05.081Z",
+      "level": "medium",
+      "sample": {
+        "ball": 81,
+        "rawErr": -0.3038219697692873,
+        "err": -0.17154530502855458,
+        "sigma": 0.08669335503392642,
+        "perfect": 0.04515278908017001,
+        "miss": 0.24382506103291807,
+        "timing": "VERY EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "bouncer",
+        "lenM": 10.425503756245597,
+        "line": "pads",
+        "type": "legbreak",
+        "ballZ": -0.11151046405956838,
+        "out": "caught",
+        "fieldType": "catch",
+        "runs": 0,
+        "q": 0.019930792232971253,
+        "az": -2.2011350383175627,
+        "speed": 6.967264781492983,
+        "spreadHalf": 0.35741257252083697,
+        "driftHalf": 0.15894516843626066,
+        "elev": 0.9953778054067892,
+        "aimAz": -1.699254,
+        "driftAz": -0.31451427149800554,
+        "scatter": -0.18736676681955697,
+        "call": "CAUGHT BEHIND",
+        "read": "Leg-spin · Googly · bouncer · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [
+          "pull",
+          "glance"
+        ],
+        "good": [
+          "punch",
+          "flick"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": -1,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -132.27666474073277,
+          "to": -150,
+          "reason": "you felt right at -304 ms raw"
+        },
+        {
+          "id": "scale.catchSkill",
+          "from": 0.912673,
+          "to": 0.8852928099999999,
+          "reason": "too harsh: caught"
+        },
+        {
+          "id": "k.loftQ",
+          "from": 12.20035,
+          "to": 12.5663605,
+          "reason": "too harsh: lofted and caught"
+        },
+        {
+          "id": "shot.pull.power",
+          "from": 1.17306,
+          "to": 1.231713,
+          "reason": "came off too soft"
+        },
+        {
+          "id": "shot.pull.elev",
+          "from": 0,
+          "to": 0.05235987755982988,
+          "reason": "trajectory too flat"
+        },
+        {
+          "id": "shot.glance.len.bouncer",
+          "from": 0.1,
+          "to": 0.2,
+          "reason": "you marked glance ideal for a bouncer ball"
+        },
+        {
+          "id": "shot.punch.len.bouncer",
+          "from": 0.15,
+          "to": 0.21,
+          "reason": "you marked punch OK for a bouncer ball"
+        },
+        {
+          "id": "shot.flick.len.bouncer",
+          "from": 0,
+          "to": 0.06,
+          "reason": "you marked flick OK for a bouncer ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:28:20.172Z",
+      "level": "medium",
+      "sample": {
+        "ball": 89,
+        "rawErr": -0.06570719458977167,
+        "err": 0.08429280541022832,
+        "sigma": 0.08669335503392642,
+        "perfect": 0.04515278908017001,
+        "miss": 0.24382506103291807,
+        "timing": "VERY LATE",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0.31,
+        "shotKey": "sweep",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 0.8075253658462316,
+        "line": "stumps",
+        "type": "legbreak",
+        "ballZ": -0.33545210450476665,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Pitched outside leg",
+        "read": "Leg-spin · Leg-break · yorker · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "sweep",
+          "flick"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -150,
+          "to": -128.92679864744292,
+          "reason": "you felt right at -66 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.8061115632068003,
+          "to": 1.8602949101030044,
+          "reason": "called it right, the game said very late"
+        },
+        {
+          "id": "shot.sweep.len.yorker",
+          "from": 0.31,
+          "to": 0.41000000000000003,
+          "reason": "you marked sweep ideal for a yorker ball"
+        },
+        {
+          "id": "shot.flick.len.yorker",
+          "from": 0.46,
+          "to": 0.56,
+          "reason": "you marked flick ideal for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:29:07.947Z",
+      "level": "medium",
+      "sample": {
+        "ball": 93,
+        "rawErr": -0.1817954974476956,
+        "err": -0.05286869880025269,
+        "sigma": 0.08929415568494421,
+        "perfect": 0.04650737275257511,
+        "miss": 0.25113981286390563,
+        "timing": "EARLY",
+        "kind": "hit",
+        "edge": "outside",
+        "fit": 0.65,
+        "shotKey": "straight",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.2311824870528654,
+        "line": "wide",
+        "type": "legbreak",
+        "ballZ": 0.034577564849363085,
+        "out": null,
+        "fieldType": "field",
+        "runs": 0,
+        "q": 0.1,
+        "az": 2.305027637609042,
+        "speed": 7.730839097863911,
+        "spreadHalf": 0.33275,
+        "driftHalf": 0,
+        "elev": 0.15547883695294637,
+        "aimAz": 2.588456,
+        "driftAz": 0,
+        "scatter": -0.2834283623909579,
+        "call": "No run",
+        "read": "Leg-spin · Leg-break · yorker · wide"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "straight",
+          "flick",
+          "sweep"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -128.92679864744292,
+          "to": -142.1439733475061,
+          "reason": "you felt right at -182 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.8602949101030044,
+          "to": 1.9161037574060946,
+          "reason": "called it right, the game said early"
+        },
+        {
+          "id": "shot.straight.len.yorker",
+          "from": 0.65,
+          "to": 0.75,
+          "reason": "you marked straight ideal for a yorker ball"
+        },
+        {
+          "id": "shot.flick.len.yorker",
+          "from": 0.56,
+          "to": 0.66,
+          "reason": "you marked flick ideal for a yorker ball"
+        },
+        {
+          "id": "shot.flick.line1",
+          "from": 0.01,
+          "to": 0.034577564849363085,
+          "reason": "line band toward the ball"
+        },
+        {
+          "id": "shot.sweep.len.yorker",
+          "from": 0.41000000000000003,
+          "to": 0.51,
+          "reason": "you marked sweep ideal for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:29:32.721Z",
+      "level": "medium",
+      "sample": {
+        "ball": 94,
+        "rawErr": -0.16789083481225145,
+        "err": -0.025746861464745363,
+        "sigma": 0.09197298035549255,
+        "perfect": 0.047902593935152366,
+        "miss": 0.2586740072498228,
+        "timing": "PERFECT",
+        "kind": "miss",
+        "edge": null,
+        "fit": 0,
+        "shotKey": "sweep",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 1.3374995509861036,
+        "line": "pads",
+        "type": "legbreak",
+        "ballZ": -0.7666645708577232,
+        "out": null,
+        "fieldType": null,
+        "runs": 0,
+        "q": 0,
+        "az": null,
+        "speed": null,
+        "spreadHalf": 0,
+        "driftHalf": 0,
+        "elev": null,
+        "aimAz": null,
+        "driftAz": 0,
+        "scatter": 0,
+        "call": "Wrong shot, beaten",
+        "read": "Leg-spin · Leg-break · yorker · pads"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "sweep"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -142.1439733475061,
+          "to": -148.58068871369244,
+          "reason": "you felt right at -168 ms raw"
+        },
+        {
+          "id": "shot.sweep.len.yorker",
+          "from": 0.51,
+          "to": 0.61,
+          "reason": "you marked sweep ideal for a yorker ball"
+        },
+        {
+          "id": "shot.sweep.line0",
+          "from": -0.42,
+          "to": -0.45999999999999996,
+          "reason": "line band toward the ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:29:49.355Z",
+      "level": "medium",
+      "sample": {
+        "ball": 95,
+        "rawErr": -0.1456845903804793,
+        "err": 0.0028960983332131374,
+        "sigma": 0.09197298035549255,
+        "perfect": 0.047902593935152366,
+        "miss": 0.2586740072498228,
+        "timing": "PERFECT",
+        "kind": "hit",
+        "edge": "inside",
+        "fit": 0.8,
+        "shotKey": "flick",
+        "lofted": false,
+        "length": "good",
+        "lenM": 4.691315974108875,
+        "line": "stumps",
+        "type": "legbreak",
+        "ballZ": -0.05143771865691474,
+        "out": null,
+        "fieldType": "field",
+        "runs": 0,
+        "q": 0.1,
+        "az": -2.7058033688144945,
+        "speed": 9.265213009453745,
+        "spreadHalf": 0.3993,
+        "driftHalf": 0,
+        "elev": -0.09164336082014524,
+        "aimAz": -2.67488,
+        "driftAz": 0,
+        "scatter": -0.030923368814494534,
+        "call": "No run",
+        "read": "Leg-spin · Leg-break · good · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": -1,
+        "ideal": [
+          "flick"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -148.58068871369244,
+          "to": -147.85666413038916,
+          "reason": "you felt right at -146 ms raw"
+        },
+        {
+          "id": "k.edgeTiming",
+          "from": 0.09863418627297282,
+          "to": 0.090743451371135,
+          "reason": "too harsh: inside edge"
+        },
+        {
+          "id": "k.edgeFit",
+          "from": 0.15781575256719366,
+          "to": 0.14519049236181816,
+          "reason": "too harsh: inside edge"
+        },
+        {
+          "id": "shot.flick.len.good",
+          "from": 0.8,
+          "to": 0.9,
+          "reason": "you marked flick ideal for a good ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:30:54.519Z",
+      "level": "medium",
+      "sample": {
+        "ball": 98,
+        "rawErr": -0.10446392103631547,
+        "err": 0.043392743094073705,
+        "sigma": 0.09197298035549255,
+        "perfect": 0.047902593935152366,
+        "miss": 0.2586740072498228,
+        "timing": "LATE",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.61,
+        "shotKey": "sweep",
+        "lofted": false,
+        "length": "yorker",
+        "lenM": 0.6864304076181724,
+        "line": "stumps",
+        "type": "legbreak",
+        "ballZ": -0.44761249836168154,
+        "out": null,
+        "fieldType": "boundary",
+        "runs": 4,
+        "q": 0.4615787878200798,
+        "az": -1.3437667676314904,
+        "speed": 16.220151387646062,
+        "spreadHalf": 0.2762420537000896,
+        "driftHalf": 0.29744061846966285,
+        "elev": 0.007037589811644915,
+        "aimAz": -1.7453292519943295,
+        "driftAz": 0.20047447309462046,
+        "scatter": 0.20108801126821868,
+        "call": "FOUR",
+        "read": "Leg-spin · Googly · yorker · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "sweep"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -147.85666413038916,
+          "to": -137.00847835687074,
+          "reason": "you felt right at -104 ms raw"
+        },
+        {
+          "id": "timing.windowScale",
+          "from": 1.9161037574060946,
+          "to": 1.9735868701282775,
+          "reason": "called it right, the game said late"
+        },
+        {
+          "id": "shot.sweep.len.yorker",
+          "from": 0.61,
+          "to": 0.71,
+          "reason": "you marked sweep ideal for a yorker ball"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:31:22.852Z",
+      "level": "medium",
+      "sample": {
+        "ball": 100,
+        "rawErr": -0.38831512901786064,
+        "err": -0.2513066506609899,
+        "sigma": 0.09473216976615732,
+        "perfect": 0.04933967175320694,
+        "miss": 0.2664342274673175,
+        "timing": "VERY EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 1,
+        "shotKey": "pull",
+        "lofted": true,
+        "length": "bouncer",
+        "lenM": 11.29232999451924,
+        "line": "stumps",
+        "type": "legbreak",
+        "ballZ": -0.04997686043964089,
+        "out": null,
+        "fieldType": "drop",
+        "runs": 0,
+        "q": 0.0008783966623439321,
+        "az": -1.8899826406284563,
+        "speed": 7.081181303050462,
+        "spreadHalf": 0.343655788470021,
+        "driftHalf": 0.16531337937973659,
+        "elev": 0.9144536594314143,
+        "aimAz": -1.699254,
+        "driftAz": -0.4385453408691236,
+        "scatter": 0.2478167002406676,
+        "call": "DROPPED · the keeper",
+        "read": "Leg-spin · Leg-break · bouncer · stumps"
+      },
+      "answers": {
+        "timing": 0,
+        "outcome": null,
+        "ideal": [
+          "pull"
+        ],
+        "good": [],
+        "dir": null,
+        "power": null,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "timing.offsetMs",
+          "from": -137.00847835687074,
+          "to": -150,
+          "reason": "you felt right at -388 ms raw"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-01T13:32:07.139Z",
+      "level": "medium",
+      "sample": {
+        "ball": 104,
+        "rawErr": -0.23507366729781215,
+        "err": -0.08507366729781216,
+        "sigma": 0.09473216976615732,
+        "perfect": 0.04933967175320694,
+        "miss": 0.2664342274673175,
+        "timing": "EARLY",
+        "kind": "hit",
+        "edge": null,
+        "fit": 0.95,
+        "shotKey": "lateCut",
+        "lofted": false,
+        "length": "short",
+        "lenM": 8.23414337632712,
+        "line": "wide",
+        "type": "legbreak",
+        "ballZ": 0.28399362299852615,
+        "out": null,
+        "fieldType": "field",
+        "runs": 1,
+        "q": 0.4308004000132843,
+        "az": 2.2280643511416605,
+        "speed": 11.007175478588639,
+        "spreadHalf": 0.29899646705418786,
+        "driftHalf": 0.22523250020259375,
+        "elev": -0.03096034774252992,
+        "aimAz": 2.514745400485596,
+        "driftAz": -0.20226872069106963,
+        "scatter": -0.08441232865286576,
+        "call": "1 run",
+        "read": "Leg-spin · Leg-break · short · wide"
+      },
+      "answers": {
+        "timing": null,
+        "outcome": -1,
+        "ideal": [],
+        "good": [
+          "lateCut",
+          "punch",
+          "cut"
+        ],
+        "dir": null,
+        "power": -1,
+        "height": null,
+        "spread": null
+      },
+      "changes": [
+        {
+          "id": "shot.lateCut.power",
+          "from": 0.510512625,
+          "to": 0.5360382562500001,
+          "reason": "came off too soft"
         }
       ]
     }
