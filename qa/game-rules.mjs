@@ -4,6 +4,7 @@ import { buildDelivery, pitchZ } from '../src/game/delivery.js';
 import { TYPES } from '../src/game/bowlerAI.js';
 import { readFileSync } from 'node:fs';
 import { tuning } from '../src/game/tuning.js';
+import { simulateInnings } from '../src/game/aiInnings.js';
 import { simulateBatted } from '../src/game/ballSim.js';
 import { resolveConditions } from '../src/game/conditions.js';
 import { trackLbw, lbwVerdict, decideLbw, decideEdgeCatch, decidePhantomEdge } from '../src/game/umpire.js';
@@ -196,6 +197,19 @@ const both = (spec) => [RELEASE_PT, RELEASE_ROUND].map((rel) => buildDelivery({ 
     }
   cases.push([`swing kept through the bounce, the turn there only the seam's; the marker on the bounce (${kinks.filter((k) => k.ok).length}/${kinks.length})`, () => 0, () => kinks.every((k) => k.ok)]);
   cases.push([`the AI bowls round the wicket ${(share * 100).toFixed(0)}% of the time`, () => 0, () => share > 0.08 && share < 0.4]);
+}
+// The AI's innings bats on the code defaults, whatever your calibration says, and leaves it in place.
+{
+  const runs = () => [1, 2, 3, 4].map((seed) => simulateInnings({ seed, format: 10 }).m.runs).join();
+  const before = tuning.overrides();
+  tuning.apply({});
+  const base = runs();
+  tuning.apply({ 'timing.windowScale': 1.97, ...JSON.parse(readFileSync('calibration.json', 'utf8')).params });
+  const mine = tuning.current();
+  const cal = runs();
+  const kept = JSON.stringify(tuning.current()) === JSON.stringify(mine);
+  tuning.apply(before);
+  cases.push([`AI innings ignores a calibration (${base} vs ${cal}) and leaves it in place`, () => 0, () => base === cal && kept]);
 }
 // Fielding restrictions.
 {

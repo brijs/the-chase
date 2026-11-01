@@ -178,6 +178,22 @@ export const tuning = {
     emit();
   },
   get: (id) => byId[id].get(),
+  /**
+   * Runs fn on the code defaults, then puts the current values back (quietly).
+   * A calibration fits the game to your timing and feel; the AI's simulated
+   * innings is balanced on the defaults and must not bat with your window.
+   */
+  withDefaults(fn) {
+    const cur = tuning.current();
+    for (const p of PARAMS) p.set(DEFAULTS[p.id]);
+    recomputeDifficulty();
+    try {
+      return fn();
+    } finally {
+      for (const p of PARAMS) p.set(cur[p.id]);
+      recomputeDifficulty();
+    }
+  },
   /** Set one value (clamped). Returns { id, from, to }. */
   set(id, v, { quiet = false } = {}) {
     const p = byId[id];

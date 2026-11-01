@@ -2,6 +2,7 @@ import { createMatch } from './match.js';
 import { SHOTS, shotFit, shotFoot } from './batting.js';
 import { makeRng } from './rules.js';
 import { aiBatterReviews } from './umpire.js';
+import { tuning } from './tuning.js';
 
 /**
  * The AI's innings: you only ever bat, so when the AI bats it is simulated,
@@ -51,7 +52,11 @@ export function aiBatter(sd, r) {
  * thinks he wasn't (three reviews, one in a super over; kept on umpire's call).
  * Returns { m, overs: [{ n, marks, runs, total, wkts, falls: [text], notes: [text] }] }.
  */
-export function simulateInnings({ difficulty = 'medium', seed = 1, format = 5, target = null, conditions = null, umpire = null, book = null, superOver = false }) {
+export function simulateInnings(opts) {
+  // On the code defaults: your calibration (a wider window, fewer edges) is yours, not the AI's.
+  return tuning.withDefaults(() => playInnings(opts));
+}
+function playInnings({ difficulty = 'medium', seed = 1, format = 5, target = null, conditions = null, umpire = null, book = null, superOver = false }) {
   // (Your side's attack, as the scorebook names it.)
   const attack = book ? book.bowlers.map((b) => b.style) : null;
   const m = createMatch({ difficulty: 'medium', seed: seed * 101 + 17, format, target, conditions, superOver, attack, umpire: umpire && { bad: umpire.bad, drs: false } });
