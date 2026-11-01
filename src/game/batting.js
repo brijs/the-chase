@@ -10,27 +10,28 @@ import { BALL_REAL_R } from './rules.js';
  *        ↓← cover drive  ↓ straight drive      ↓→ on drive
  *
  * Off side is screen-left from behind the bowler. `az` is the aimed direction
- * (radians from +X toward +Z). `len` and `line` say which balls the shot is
+ * (radians from +X toward +Z); `arc` is how far either side of it the batter
+ * can place the ball (a well-timed, well-chosen shot finds the gap in it). `len` and `line` say which balls the shot is
  * for; `fit` (0..1) is how well this ball suits it. Timing error is
  *   err = press + swing - contact   (seconds; < 0 early, > 0 late)
  */
 const D = Math.PI / 180;
 export const SHOTS = {
-  straight: { name: 'Straight drive', az: 0 * D, foot: 'front', swing: 0.13, power: 1.0, len: { yorker: 0.55, full: 1, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.14, 0.2] },
-  cover: { name: 'Cover drive', az: 40 * D, foot: 'front', swing: 0.13, power: 1.0, len: { yorker: 0.3, full: 1, good: 0.65, short: 0.12, bouncer: 0 }, line: [0.1, 0.6] },
-  cut: { name: 'Square cut', az: 88 * D, foot: 'back', swing: 0.12, power: 1.08, drift: 0.6, len: { yorker: 0, full: 0.12, good: 0.55, short: 1, bouncer: 0.5 }, line: [0.24, 0.8] },
-  lateCut: { name: 'Late cut (third-man guide)', az: 158 * D, foot: 'back', swing: 0.09, power: 0.42, paceUse: 0.32, bias: 0.035, drift: 0.8, len: { yorker: 0, full: 0.1, good: 0.7, short: 0.95, bouncer: 0.3 }, line: [0.14, 0.75] },
-  punch: { name: 'Back-foot punch', az: 18 * D, foot: 'back', swing: 0.11, power: 0.62, len: { yorker: 0.05, full: 0.3, good: 0.9, short: 0.9, bouncer: 0.15 }, line: [-0.12, 0.36] },
-  glance: { name: 'Leg glance', az: -140 * D, foot: 'front', swing: 0.1, power: 0.55, paceUse: 0.15, bias: 0.02, drift: 1.2, len: { yorker: 0.35, full: 0.85, good: 0.9, short: 0.45, bouncer: 0.1 }, line: [-0.42, -0.02] },
-  pull: { name: 'Pull', az: -88 * D, foot: 'back', swing: 0.12, power: 1.12, drift: 0.6, len: { yorker: 0, full: 0.04, good: 0.35, short: 1, bouncer: 0.9 }, line: [-0.45, 0.36] },
+  straight: { name: 'Straight drive', az: 0 * D, arc: 14 * D, foot: 'front', swing: 0.13, power: 1.0, len: { yorker: 0.55, full: 1, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.14, 0.2] },
+  cover: { name: 'Cover drive', az: 40 * D, arc: 24 * D, foot: 'front', swing: 0.13, power: 1.0, len: { yorker: 0.3, full: 1, good: 0.65, short: 0.12, bouncer: 0 }, line: [0.1, 0.6] },
+  cut: { name: 'Square cut', az: 88 * D, arc: 24 * D, foot: 'back', swing: 0.12, power: 1.08, drift: 0.6, len: { yorker: 0, full: 0.12, good: 0.55, short: 1, bouncer: 0.5 }, line: [0.24, 0.8] },
+  lateCut: { name: 'Late cut (third-man guide)', az: 158 * D, arc: 20 * D, foot: 'back', swing: 0.09, power: 0.42, paceUse: 0.32, bias: 0.035, drift: 0.8, len: { yorker: 0, full: 0.1, good: 0.7, short: 0.95, bouncer: 0.3 }, line: [0.14, 0.75] },
+  punch: { name: 'Back-foot punch', az: 18 * D, arc: 20 * D, foot: 'back', swing: 0.11, power: 0.62, len: { yorker: 0.05, full: 0.3, good: 0.9, short: 0.9, bouncer: 0.15 }, line: [-0.12, 0.36] },
+  glance: { name: 'Leg glance', az: -140 * D, arc: 20 * D, foot: 'front', swing: 0.1, power: 0.55, paceUse: 0.15, bias: 0.02, drift: 1.2, len: { yorker: 0.35, full: 0.85, good: 0.9, short: 0.45, bouncer: 0.1 }, line: [-0.42, -0.02] },
+  pull: { name: 'Pull', az: -88 * D, arc: 28 * D, foot: 'back', swing: 0.12, power: 1.12, drift: 0.6, len: { yorker: 0, full: 0.04, good: 0.35, short: 1, bouncer: 0.9 }, line: [-0.45, 0.36] },
   // The pull key's other half: to a full or good-length ball the batter flicks it off the pads.
-  flick: { name: 'Flick', az: -62 * D, foot: 'front', swing: 0.1, power: 0.7, paceUse: 0.18, drift: 1.1, len: { yorker: 0.4, full: 0.95, good: 0.7, short: 0.2, bouncer: 0 }, line: [-0.42, -0.04] },
-  onDrive: { name: 'On drive', az: -32 * D, foot: 'front', swing: 0.13, power: 0.95, len: { yorker: 0.5, full: 1, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.32, 0.08] },
+  flick: { name: 'Flick', az: -62 * D, arc: 22 * D, foot: 'front', swing: 0.1, power: 0.7, paceUse: 0.18, drift: 1.1, len: { yorker: 0.4, full: 0.95, good: 0.7, short: 0.2, bouncer: 0 }, line: [-0.42, -0.04] },
+  onDrive: { name: 'On drive', az: -32 * D, arc: 22 * D, foot: 'front', swing: 0.13, power: 0.95, len: { yorker: 0.5, full: 1, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.32, 0.08] },
   // S + arrows: the specials. Down on one knee; tighter timing (window x).
-  sweep: { name: 'Sweep', az: -100 * D, foot: 'sweep', special: true, swing: 0.15, power: 0.85, window: 0.7, drift: 1.4, len: { yorker: 0.2, full: 0.9, good: 0.85, short: 0.12, bouncer: 0 }, line: [-0.42, 0.14] },
-  reverseSweep: { name: 'Reverse sweep', az: 112 * D, foot: 'sweep', special: true, swing: 0.15, power: 0.8, window: 0.6, drift: 1.4, len: { yorker: 0.1, full: 0.85, good: 0.85, short: 0.1, bouncer: 0 }, line: [-0.06, 0.6] },
-  scoop: { name: 'Scoop', az: 177 * D, foot: 'sweep', special: true, swing: 0.13, power: 0.5, paceUse: 0.45, window: 0.55, drift: 1.6, len: { yorker: 0.6, full: 0.9, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.16, 0.2] },
-  defence: { name: 'Defence', az: 6 * D, foot: 'auto', swing: 0.1, power: 0.22, len: { yorker: 0.85, full: 0.95, good: 1, short: 0.85, bouncer: 0.3 }, line: [-0.4, 0.5] },
+  sweep: { name: 'Sweep', az: -100 * D, arc: 28 * D, foot: 'sweep', special: true, swing: 0.15, power: 0.85, window: 0.7, drift: 1.4, len: { yorker: 0.2, full: 0.9, good: 0.85, short: 0.12, bouncer: 0 }, line: [-0.42, 0.14] },
+  reverseSweep: { name: 'Reverse sweep', az: 112 * D, arc: 24 * D, foot: 'sweep', special: true, swing: 0.15, power: 0.8, window: 0.6, drift: 1.4, len: { yorker: 0.1, full: 0.85, good: 0.85, short: 0.1, bouncer: 0 }, line: [-0.06, 0.6] },
+  scoop: { name: 'Scoop', az: 177 * D, arc: 14 * D, foot: 'sweep', special: true, swing: 0.13, power: 0.5, paceUse: 0.45, window: 0.55, drift: 1.6, len: { yorker: 0.6, full: 0.9, good: 0.55, short: 0.1, bouncer: 0 }, line: [-0.16, 0.2] },
+  defence: { name: 'Defence', az: 6 * D, arc: 0 * D, foot: 'auto', swing: 0.1, power: 0.22, len: { yorker: 0.85, full: 0.95, good: 1, short: 0.85, bouncer: 0.3 }, line: [-0.4, 0.5] },
 };
 /**
  * Outcome-model coefficients. Tunable (src/game/tuning.js): read at use, so a
@@ -48,6 +49,8 @@ export const K = {
   edgeMove: 0.35,
   spinMove: 0.45, // how much of a spinner's turn plays like seam movement (he sees it coming)
   spinPower: 3.0, // m/s more off a clean hit against spin
+  place: 0.8, // how far a perfectly timed, well-chosen shot is steered into the gap (0 = never)
+  placeFrom: 0.8, // contact quality (timing x fit) below which there is no placing at all (only a near-perfect, well-chosen shot finds the gap)
   angleAway: 0.12, // angle across the right-hander (round the wicket to off), per m beyond 0.3 m -> extra movement
   edgeTiming: 0.25, // poor timing -> edge
   defenceEdge: 0.55, // the dead bat edges less
@@ -113,7 +116,7 @@ export function timingLabel(err, w) {
  *   { kind: 'playedOn' }                              inside edge onto the stumps
  * Every branch carries err, fit, foot, tContact and a short `call` for the HUD.
  */
-export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
+export function resolveShot({ del, shotKey, lofted, pressT, diff, rng, field = null }) {
   const shot = SHOTS[shotKey];
   const foot = shotFoot(shot, del);
   const tC = del.contactTime(foot);
@@ -169,7 +172,15 @@ export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
   const paceF = del.speed / 28;
   const scatter = ((rng() + rng()) - 1) * K.spread * (0.8 + 0.9 * (1 - q)) * paceF;
   const driftAz = err * K.drift * (shot.drift ?? 1) * paceF;
-  const az = shot.az + driftAz + scatter;
+  let az = shot.az + driftAz + scatter;
+  // Placement: the better it is timed and the better the shot suits the ball,
+  // the more it is steered into the biggest gap in the shot's arc.
+  const placeK = K.place * Math.min(1, Math.max(0, (q - K.placeFrom) / (1 - K.placeFrom))) ** 0.8;
+  let gapAz = null;
+  if (field && shot.arc && placeK > 0) {
+    gapAz = findGap(p, shot.az, shot.arc, field, lofted);
+    az += (gapAz - az) * placeK;
+  }
   // Glances, guides and scoops use the bowler's pace as much as the swing.
   // (Against spin there is little pace to use, but time to get into it and hit through: K.spinPower.)
   let speed = shot.power * (K.groundBase + K.groundQ * q) + (shot.paceUse ?? 0) * del.speed * q + (del.spec?.spin ? K.spinPower * q * shot.power : 0);
@@ -199,7 +210,46 @@ export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
   // Calibrated launch angle per shot (feedback: "too flat / too high").
   elev += shot.elev ?? 0;
   const quality = q > 0.82 ? 'Middled' : q > 0.55 ? 'Well hit' : q > 0.3 ? 'Mistimed' : 'Off the inside half';
-  return { ...base, kind: 'hit', edge: null, az, aimAz: shot.az, driftAz, scatter, speed, elev, q, call: quality };
+  const placed = gapAz != null && placeK > 0.3 && Math.abs(gapAz - shot.az) > 4 * D;
+  return { ...base, kind: 'hit', edge: null, az, aimAz: shot.az, driftAz, scatter, gapAz, placeK, speed, elev, q, call: placed ? `${quality} · into the gap` : quality };
+}
+
+/**
+ * The best direction within aim ± arc from the contact point p: the one whose
+ * nearest fielder (by angle, less the angle he covers by reach and running)
+ * is furthest away. Fielders behind the shot or right on top of the bat don't
+ * count; a lofted shot cares about the deep men, a ground shot about everyone.
+ */
+export function findGap(p, aim, arc, field, lofted = false) {
+  const men = [];
+  for (const f of field) {
+    const dx = f.x - p.x;
+    const dz = f.z - p.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 3) continue;
+    // What he covers: his reach at that distance, plus what he can run while the ball travels.
+    const cover = Math.atan(1.0 / d) + 0.12 + (lofted && d < 14 ? -0.08 : 0);
+    men.push({ az: Math.atan2(dz, dx), cover });
+  }
+  let best = aim;
+  let bestScore = -Infinity;
+  const n = 24;
+  for (let i = 0; i <= n; i++) {
+    const a = aim - arc + (2 * arc * i) / n;
+    let gap = Math.PI;
+    for (const m of men) {
+      const da = Math.abs(Math.atan2(Math.sin(a - m.az), Math.cos(a - m.az)));
+      if (da > Math.PI / 2) continue;
+      gap = Math.min(gap, da - m.cover);
+    }
+    // Past ~20 degrees clear it is simply open; then a gap near the aim beats one at the edge of the arc.
+    const score = Math.min(gap, 0.35) - 0.15 * Math.abs(a - aim);
+    if (score > bestScore) {
+      bestScore = score;
+      best = a;
+    }
+  }
+  return best;
 }
 
 /**

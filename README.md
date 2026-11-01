@@ -171,6 +171,24 @@ with the ground).
   (*FIELD · DEATH · 2 OUT (MAX 2)*), and the score bar shows *PP*.
 - **No restrictions** in a super over or the nets.
 
+### Finding the gaps
+
+Every shot has an arc it can be placed in around its line: 14° either side
+for the straight drive, 24° for the cover drive and cut, and 28° for the
+pull. A near-perfect press on the right shot for the ball (contact quality
+0.8 or better: timing × fit) steers the ball into the biggest gap in that
+arc, up to 80% of the way. Within that arc it can go past the fielders on
+either side, but never past the end of it.
+
+- **What counts as a gap:** each fielder covers an angle (his reach at that
+  distance, plus what he can run while the ball travels). Past about 20°
+  clear, it's open, and the ball goes where it was aimed.
+- **The steer falls off fast:** 12 ms off perfect it is about 60%, and
+  40 ms off it is gone, leaving the usual drift and scatter.
+- **The call** says *into the gap* when it moved the ball.
+- **Tuning:** both numbers can be changed with T (*Placing*).
+- **Balance:** a good batter on medium wins about 65%, up from 58%.
+
 ### Over and round the wicket
 
 The AI picks a side for each over, with the odd single ball from the other

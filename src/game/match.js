@@ -1,4 +1,4 @@
-import { GAME, DIFFICULTY, FORMATS, POWERPLAY, MAX_OUT, RELEASE_PT, RELEASE_ROUND, makeRng } from './rules.js';
+import { GAME, DIFFICULTY, FORMATS, POWERPLAY, MAX_OUT, RELEASE_PT, RELEASE_ROUND, KEEPER_HOME, KEEPER_STANDING_UP, makeRng } from './rules.js';
 import { buildDelivery, LINE_NAMES, LENGTH_NAMES, lengthOf, lineOf } from './delivery.js';
 import { SHOTS, resolveShot, lawsCheck, shotFoot } from './batting.js';
 import { simulateBatted } from './ballSim.js';
@@ -137,7 +137,11 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
       o.call = o.out ? (o.out === 'bowled' ? 'BOWLED' : 'LBW') : del.isWide ? 'WIDE' : law.pad ? padCall(o, law) : 'Left alone';
       return o;
     }
-    const shot = resolveShot({ del, shotKey: input.shotKey, lofted: input.lofted, pressT: input.pressT, diff, rng });
+    // Where everyone actually is at contact (the controller fills m.live), not just their spots.
+    const live = m.live ?? {};
+    const field = m.field.map((f) => (live[f.id] ? { ...f, x: live[f.id][0], z: live[f.id][1] } : f));
+    const keeperAt = live.keeper ?? null;
+    const shot = resolveShot({ del, shotKey: input.shotKey, lofted: input.lofted, pressT: input.pressT, diff, rng, field: [...field, { id: 'keeper', x: keeperAt?.[0] ?? (del.spec.spin ? KEEPER_STANDING_UP.x : KEEPER_HOME.x), z: keeperAt?.[1] ?? KEEPER_HOME.z }] });
     o.shot = shot;
     o.foot = shot.foot;
     o.tContact = shot.tContact;
@@ -171,9 +175,6 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     const sim = simulateBatted(p0, shot, { wind: m.cond.wind, roll: m.cond.roll });
     o.sim = sim;
     o.contactPos = p0;
-    // Where everyone actually is at contact (the controller fills m.live), not just their spots.
-    const live = m.live ?? {};
-    const field = m.field.map((f) => (live[f.id] ? { ...f, x: live[f.id][0], z: live[f.id][1] } : f));
     const fld = resolveFielding(sim, field, diff, rng, { noRuns: shot.shotKey === 'defence' && shot.q < 0.5, keeperAt: live.keeper });
     o.fielding = fld;
     if (fld.type === 'catch' && shot.edge) {

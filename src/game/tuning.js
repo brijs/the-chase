@@ -116,6 +116,8 @@ const OUT = [
   ['angleAway', 'Angle across the batter → movement (per m)', 0, 0.5],
   ['spinMove', 'Spin: share of the turn that plays as movement', 0, 1],
   ['spinPower', 'Spin: extra speed off a clean hit (m/s)', 0, 6],
+  ['place', 'Placing: how far a good shot is steered into the gap', 0, 1],
+  ['placeFrom', 'Placing: contact quality it starts at', 0, 0.95],
   ['edgeTiming', 'Edge: poor timing', 0, 1],
   ['defenceEdge', 'Edge: defence multiplier', 0, 1.5],
   ['loftEdge', 'Edge: lofted extra', 0, 0.3],

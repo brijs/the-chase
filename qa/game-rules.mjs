@@ -1,5 +1,5 @@
 import { createMatch } from '../src/game/match.js';
-import { SHOTS, shotFoot, shotFor } from '../src/game/batting.js';
+import { SHOTS, shotFoot, shotFor, findGap, K } from '../src/game/batting.js';
 import { buildDelivery } from '../src/game/delivery.js';
 import { TYPES } from '../src/game/bowlerAI.js';
 import { readFileSync } from 'node:fs';
@@ -61,9 +61,9 @@ let cases = [
   ['pull to a yorker on the stumps -> beaten/out/edged > 60%', trial({ type: 'yorker', lenM: 1.0, lineZ: 0.0, hStumps: 0.12 }, { shot: 'pull' }), (p) => p(['beaten', 'bowled', 'lbw', 'edge:inside', 'edge:outside', 'edge:top', 'caught']) > 0.6],
   ['way early (-200 ms) straight drive -> beaten', trial({ type: 'outswinger', lenM: 3.0, lineZ: 0.3, hStumps: 0.45 }, { shot: 'straight', err: -0.2 }), (p) => p(['beaten', 'bowled', 'lbw']) === 1],
   ['forward defence to good length on the stumps -> rarely out (< 12%)', trial({ type: 'outswinger', lenM: 5.3, lineZ: 0.05, hStumps: 0.7, swing: 0.15 }, { shot: 'defence' }), (p) => p(['bowled', 'lbw', 'caught']) < 0.12],
-  ['perfect cover drives scatter round the aim (sd 2-12 deg)', trial(FULL_OFF, { shot: 'cover' }), (p) => p.az.sd > 2 && p.az.sd < 12],
+  ['perfect cover drives are placed inside the cover arc (16..64 deg)', trial(FULL_OFF, { shot: 'cover' }), (p) => p.az.mean > 16 && p.az.mean < 64 && p.az.sd < 12],
   ['early (-40 ms) cover drive is dragged leg-side of perfect', trial(FULL_OFF, { shot: 'cover', err: -0.04 }), (p) => p.az.mean < 32],
-  ['perfect pull to a short ball stays square (mean -100..-75 deg)', trial({ type: 'bouncer', lenM: 8.3, lineZ: 0.0, hStumps: 1.15 }, { shot: 'pull' }), (p) => p.az.mean > -100 && p.az.mean < -75],
+  ['perfect pull to a short ball stays in the pull arc (mean -116..-60 deg)', trial({ type: 'bouncer', lenM: 8.3, lineZ: 0.0, hStumps: 1.15 }, { shot: 'pull' }), (p) => p.az.mean > -116 && p.az.mean < -60],
   ['late cut guides to third man (mean 140..175 deg)', trial({ type: 'legcutter', lenM: 7.5, lineZ: 0.4, hStumps: 1.0, seam: 0.05 }, { shot: 'lateCut' }), (p) => p.az.mean > 140 && p.az.mean < 175],
   ['perfect sweep to a full ball at the pads -> mostly hit', trial({ type: 'offcutter', lenM: 3.4, lineZ: -0.15, hStumps: 0.45 }, { shot: 'sweep' }), (p) => p(['hit', 'boundary']) > 0.6],
   ['sweep 45 ms late at the stumps -> beaten/out/edged > 45% (tight window)', trial({ type: 'offcutter', lenM: 3.4, lineZ: 0.0, hStumps: 0.45 }, { shot: 'sweep', err: 0.045 }), (p) => p(['beaten', 'bowled', 'lbw', 'caught', 'edge:top', 'edge:inside', 'edge:outside']) > 0.45],
@@ -76,6 +76,37 @@ let cases = [
 // The pull key: a flick to a fuller ball, a pull to a short one.
 const delAt = (lenM) => buildDelivery({ type: 'outswinger', kph: 138, lenM, lineZ: 0, hStumps: 0.6, swing: 0, seam: 0, length: 'good' }, 0.72);
 const keyCases = [[2.5, 'flick'], [5.5, 'flick'], [6.5, 'pull'], [9.0, 'pull']];
+// Placing: into the gap, more the better it is timed.
+{
+  const D = Math.PI / 180;
+  const p0 = { x: -7.1, z: 0 };
+  const at = (deg, d) => ({ x: p0.x + Math.cos(deg * D) * d, z: p0.z + Math.sin(deg * D) * d });
+  const gapDeg = (field) => findGap(p0, 40 * D, 24 * D, field) / D;
+  cases.push(['a fielder at cover: the cover drive goes either side of him', () => 0, () => Math.abs(gapDeg([at(40, 14)]) - 40) > 10]);
+  cases.push(['cover and extra cover blocked: it goes past one of them', () => 0, () => Math.abs(gapDeg([at(32, 14), at(48, 14)]) - 40) > 14]);
+  cases.push(['extra cover and mid-off blocked: it finds the gap toward point', () => 0, () => gapDeg([at(30, 14), at(12, 20)]) > 48]);
+  cases.push(['an open field: it goes where it is aimed', () => 0, () => Math.abs(gapDeg([at(-30, 14), at(120, 14)]) - 40) < 3]);
+  const placedShare = (err) => {
+    let n = 0, placed = 0;
+    for (let i = 1; i <= 200; i++) {
+      const m = createMatch({ seed: 4000 + i });
+      m.startOver();
+      const ball = m.nextDelivery({ ...base, ...FULL_OFF });
+      const sh = SHOTS.cover;
+      const tC = ball.del.contactTime(shotFoot(sh, ball.del));
+      const o = m.resolve(ball, { shotKey: 'cover', lofted: false, pressT: tC - sh.swing + err });
+      if (o.kind !== 'hit' || o.shot.edge) continue;
+      n++;
+      placed += o.shot.placeK;
+    }
+    return placed / Math.max(1, n);
+  };
+  cases.push(['placing needs timing: perfect steers it, 12 ms off less, 40 ms off not at all', () => 0, () => {
+    const [a, b, c] = [placedShare(0), placedShare(0.012), placedShare(0.04)];
+    console.log(`       placing ${a.toFixed(2)} / ${b.toFixed(2)} / ${c.toFixed(2)} (max ${K.place})`);
+    return a > 0.6 && b > 0.05 && b < a * 0.8 && c < 0.05;
+  }]);
+}
 for (const [len, want] of keyCases) cases.push([`-> key on a ball pitching ${len} m out plays the ${want}`, () => 0, () => shotFor('R', false, delAt(len)) === want]);
 cases.push(['S with -> is still the sweep', () => 0, () => shotFor('R', true, delAt(3)) === 'sweep']);
 // The straight ball barely moves.
