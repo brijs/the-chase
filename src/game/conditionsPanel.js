@@ -6,7 +6,7 @@ import { GROUPS, SKY, PITCH, OUTFIELD, WIND, randomConditions } from './conditio
  * ball. 🎲 rolls a random day; "New random conditions every match" rolls one
  * for each match. The look of the ground (light, pitch colour) follows as you
  * choose. Conditions are fixed once a match starts; in the nets they change on
- * the next ball.
+ * the next ball. DISPLAY (any time): the size the ball is drawn at.
  */
 const CSS = `
 #condp { position: absolute; left: 50%; top: 6vh; transform: translateX(-50%); width: min(600px, calc(100vw - 20px)); max-height: 88vh; overflow: auto; padding: 12px 16px; pointer-events: auto; display: none; font-size: 12px; z-index: 6; }
@@ -45,6 +45,7 @@ function what(g, sel) {
     const p = PITCH[sel.pitch];
     const bits = [];
     if (p.seam !== 1) bits.push(`seam ${pct(p.seam)}`);
+    if ((p.turn ?? 1) !== 1) bits.push(`spin ${pct(p.turn)}`);
     if (p.bounce !== 1) bits.push(`bounce ${p.bounce > 1 ? 'higher' : 'lower'}`);
     if (p.uneven !== 1) bits.push(p.uneven > 1 ? `${p.uneven > 2 ? 'very ' : ''}uneven bounce (the odd shooter or one that rears)` : 'true bounce');
     if (p.keep !== 0.9) bits.push(p.keep > 0.9 ? 'skids on, quicker off the surface' : 'grips, slower off the surface');
@@ -54,7 +55,7 @@ function what(g, sel) {
   return o.roll === 1 ? 'Normal pace along the ground.' : o.roll > 1 ? 'Thick grass slows the ball: fewer boundaries along the ground.' : 'Hard and quick: the ball races away to the rope.';
 }
 
-export function createConditionsPanel({ root, ctl, getChoice, setChoice, editable, onClose }) {
+export function createConditionsPanel({ root, ctl, getChoice, setChoice, editable, onClose, ball = null }) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -77,6 +78,11 @@ export function createConditionsPanel({ root, ctl, getChoice, setChoice, editabl
         <label><input type="checkbox" data-act="drs" ${umpire.drs ? 'checked' : ''} ${can ? '' : 'disabled'}> DRS: 3 reviews (V)</label>
       </div>
       <div class="what">${umpire.bad === 0 ? 'Perfect umpires: every close call is right.' : `A plumb one is rarely missed; a near miss, a faint edge or a feather off the bat before the pad goes the wrong way up to ${Math.round(umpire.bad * 100)}% of the time.`}${umpire.drs ? ' Given out LBW or caught off a faint edge, you get 10 s to review; a review that ends on umpire\'s call is kept.' : ''}</div>
+      ${ball ? `<div class="k">DISPLAY</div>
+      <div class="opts" style="align-items:center;gap:8px">
+        <span>Ball size</span><input type="range" min="${ball.min}" max="${ball.max}" step="0.005" value="${ball.get()}" data-ball style="flex:1;min-width:140px;accent-color:#9a2731"><b>${Math.round((ball.get() / 0.036) * 10) / 10}× real</b>
+      </div>
+      <div class="what">How big the ball is drawn (the game plays the same). Bigger is easier to pick up on a small screen.</div>` : ''}
       <div class="row">
         <button data-act="roll" ${can ? '' : 'disabled'}>🎲 Random day</button>
         <button data-act="std" ${can ? '' : 'disabled'}>Standard</button>
@@ -99,6 +105,11 @@ export function createConditionsPanel({ root, ctl, getChoice, setChoice, editabl
     draw();
   });
   el.addEventListener('input', (e) => {
+    if (e.target.dataset.ball !== undefined && ball) {
+      ball.set(+e.target.value);
+      e.target.nextElementSibling.textContent = `${Math.round((ball.get() / 0.036) * 10) / 10}× real`;
+      return;
+    }
     if (e.target.dataset.ump === undefined || !editable()) return;
     const choice = getChoice();
     setChoice({ ...choice, umpire: { ...choice.umpire, bad: +e.target.value } });

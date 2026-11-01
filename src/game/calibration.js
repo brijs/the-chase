@@ -156,6 +156,7 @@ export function createCalibration({ ctl, tuning, root, onTune, onExit }) {
     if (sel.type !== 'auto') {
       const T = TYPES[sel.type];
       Object.assign(f, { type: sel.type, kph: Math.round(mid(T.kph, h(3))), swing: mid(T.swing, h(4)), seam: mid(T.seam, h(5)) });
+      if (T.style) Object.assign(f, { style: T.style, spin: true, keep: T.keep });
       if (T.length && length === 'auto') length = T.length;
     }
     if (length !== 'auto') {

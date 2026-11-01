@@ -61,7 +61,7 @@ export function scorecardHtml({ m, bk, reason = 'view', onStrike = -1, atCrease 
   const yet = bk.batters.filter((b) => !b.batted).map((b) => b.name.split(' ').slice(1).join(' '));
   const bowl = bk.bowlers
     .filter((b) => b.balls > 0)
-    .map((b) => `<tr><td>${b.name}</td><td>${overs(b.balls)}</td><td>${b.maidens}</td><td>${b.runs}</td><td>${b.wkts}</td><td>${b.balls ? ((b.runs / b.balls) * 6).toFixed(1) : '-'}</td></tr>`)
+    .map((b) => `<tr><td>${b.name}${b.style && b.style !== 'pace' ? ` <span style="color:#6f6a55">${b.style === 'off' ? 'OB' : 'LB'}</span>` : ''}</td><td>${overs(b.balls)}</td><td>${b.maidens}</td><td>${b.runs}</td><td>${b.wkts}</td><td>${b.balls ? ((b.runs / b.balls) * 6).toFixed(1) : '-'}</td></tr>`)
     .join('');
   const chase = m.target != null;
   return `<h2>${head}</h2>

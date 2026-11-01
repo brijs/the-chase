@@ -52,7 +52,9 @@ export function aiBatter(sd, r) {
  * Returns { m, overs: [{ n, marks, runs, total, wkts, falls: [text], notes: [text] }] }.
  */
 export function simulateInnings({ difficulty = 'medium', seed = 1, format = 5, target = null, conditions = null, umpire = null, book = null, superOver = false }) {
-  const m = createMatch({ difficulty: 'medium', seed: seed * 101 + 17, format, target, conditions, superOver, umpire: umpire && { bad: umpire.bad, drs: false } });
+  // (Your side's attack, as the scorebook names it.)
+  const attack = book ? book.bowlers.map((b) => b.style) : null;
+  const m = createMatch({ difficulty: 'medium', seed: seed * 101 + 17, format, target, conditions, superOver, attack, umpire: umpire && { bad: umpire.bad, drs: false } });
   const r = makeRng(seed * 31 + 5);
   // (Over a long innings a tight hard-level batter piles up too much: a touch looser there.)
   const bat = aiBatter((AI_SKILL[difficulty] ?? AI_SKILL.medium) * (difficulty === 'hard' && format > 5 && !superOver ? 1.3 : 1), r);

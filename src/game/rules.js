@@ -34,6 +34,8 @@ export const ROUND_DZ = -1.25;
 export const RELEASE_ROUND = { ...RELEASE_PT, z: RELEASE_PT.z + ROUND_DZ };
 export const KEEPER_HOME = { x: -16.2, z: 0.55 };
 export const KEEPER_AT_STUMPS = { x: -9.75, z: 0.55 };
+/** Standing up to the stumps, for the spinners. */
+export const KEEPER_STANDING_UP = { x: -10.15, z: 0.42 };
 export const STUMPS_X = -9.0;
 
 /**
@@ -70,6 +72,60 @@ export function ellipseK(x, z, ab) {
 
 /** Inside the fielding circle? */
 export const insideRing = (x, z) => ellipseK(x, z, OVAL.ring) < 1;
+
+/**
+ * The bowl round the slab (the stands, the banks and the land beyond), as a
+ * profile of height against d, the distance out past the slab's rim along the
+ * offset ellipse [a + d, b + d]. A flat apron, a grass bank, five terraces
+ * (stepped where there are seats, a smooth bank elsewhere), a concourse and a
+ * back wall, then rolling ground. The stadium meshes and the ball (a six
+ * landing in the crowd) both read it.
+ */
+export const STANDS = { apron: 2, bankTop: [6, 2.2], steps: 5, tread: 1.6, rise: 0.55, concourse: 17, wall: [17, 17.6, 7.0] };
+/** Seated sectors by angle round the ellipse (th = atan2(z / b, (x - cx) / a)): both sides, not behind either end. */
+export const SEATED = [
+  [0.5, 1.45],
+  [1.6, 2.6],
+  [-2.6, -2.05],
+  [-1.45, -0.5],
+];
+export const PAVILION = [-2.0, -1.5];
+export const seatedTh = (th) => SEATED.some(([a, b]) => th >= a && th <= b);
+/** d (m past the slab's rim) and th for a point; d <= 0 on the slab. */
+export function beyondSlab(x, z) {
+  const [a, b] = OVAL.slab;
+  const dx = x - OVAL.cx;
+  const th = Math.atan2(z / b, dx / a);
+  if (ellipseK(x, z, OVAL.slab) <= 1) return { d: 0, th };
+  let lo = 0;
+  let hi = 2 * Math.hypot(dx, z);
+  for (let i = 0; i < 28; i++) {
+    const d = (lo + hi) / 2;
+    const u = dx / (a + d);
+    const v = z / (b + d);
+    if (u * u + v * v > 1) lo = d;
+    else hi = d;
+  }
+  return { d: (lo + hi) / 2, th: Math.atan2(z / (b + lo), dx / (a + lo)) };
+}
+/** The profile's height at d, stepped or smooth. */
+export function profileY(d, seated) {
+  const S = STANDS;
+  const [d1, y1] = S.bankTop;
+  const top = y1 + S.steps * S.rise;
+  if (d <= S.apron) return 0;
+  if (d <= d1) return (y1 * (d - S.apron)) / (d1 - S.apron);
+  const d2 = d1 + S.steps * S.tread;
+  if (d < d2) return seated ? y1 + (Math.floor((d - d1) / S.tread) + 1) * S.rise : y1 + ((d - d1) / S.tread) * S.rise;
+  if (d < S.wall[0]) return top;
+  if (seated && d < S.wall[1]) return S.wall[2];
+  return top + Math.min(7, Math.max(0, d - S.wall[1]) * 0.05);
+}
+/** Ground height anywhere: 0 on the slab, the bowl's profile beyond it. */
+export function standHeight(x, z) {
+  const { d, th } = beyondSlab(x, z);
+  return d <= 0 ? 0 : profileY(d, seatedTh(th));
+}
 
 /** Distance from (x0, z0) along azimuth az to the ellipse [a, b]. */
 export function rayToEllipse(x0, z0, az, ab) {

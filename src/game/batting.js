@@ -46,6 +46,8 @@ export const K = {
   edgeBase: 0.02,
   edgeFit: 0.4, // poor fit -> edge
   edgeMove: 0.35,
+  spinMove: 0.45, // how much of a spinner's turn plays like seam movement (he sees it coming)
+  spinPower: 3.0, // m/s more off a clean hit against spin
   angleAway: 0.12, // angle across the right-hander (round the wicket to off), per m beyond 0.3 m -> extra movement
   edgeTiming: 0.25, // poor timing -> edge
   defenceEdge: 0.55, // the dead bat edges less
@@ -130,7 +132,9 @@ export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
   const tq = Math.exp(-((err / w.sigma) ** 2));
   // Movement in the air and off the seam, plus any bounce an uneven pitch adds.
   // A ball angled across him (round the wicket at off stump and wider) plays like a little more movement.
-  const move = Math.abs(del.movement) + 1.5 * Math.abs(del.spec?.surprise ?? 0) + K.angleAway * Math.max(0, (del.angle ?? 0) - 0.3);
+  // Spin: slower, so the turn is seen and played; only part of it counts (K.spinMove).
+  const moved = del.spec?.spin ? Math.abs(del.spec.swing) + Math.abs(del.spec.seam) * K.spinMove : Math.abs(del.movement);
+  const move = moved + 1.5 * Math.abs(del.spec?.surprise ?? 0) + K.angleAway * Math.max(0, (del.angle ?? 0) - 0.3);
   // A poor fit plays and misses as often as it edges; the wrong shape entirely
   // (a pull to a yorker, a drive to a bouncer) almost never meets it.
   let missP = Math.max(0, (1 - fit) ** 2 * K.missCoef * (1 - K.missTimingRelief * tq) + move * K.missMove - K.missFloor);
@@ -167,7 +171,8 @@ export function resolveShot({ del, shotKey, lofted, pressT, diff, rng }) {
   const driftAz = err * K.drift * (shot.drift ?? 1) * paceF;
   const az = shot.az + driftAz + scatter;
   // Glances, guides and scoops use the bowler's pace as much as the swing.
-  let speed = shot.power * (K.groundBase + K.groundQ * q) + (shot.paceUse ?? 0) * del.speed * q;
+  // (Against spin there is little pace to use, but time to get into it and hit through: K.spinPower.)
+  let speed = shot.power * (K.groundBase + K.groundQ * q) + (shot.paceUse ?? 0) * del.speed * q + (del.spec?.spin ? K.spinPower * q * shot.power : 0);
   let elev;
   if (shotKey === 'scoop') {
     // Up and over the keeper: always in the air.

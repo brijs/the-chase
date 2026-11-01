@@ -367,7 +367,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad, onReview 
     camera.fov = p.fov * Math.max(1, 1.45 / Math.max(0.5, aspect()));
     camera.aspect = aspect();
     camera.near = 0.3;
-    camera.far = 260;
+    camera.far = 330;
     camera.lookAt(p.target);
     camera.updateProjectionMatrix();
   }

@@ -18,10 +18,25 @@ export const TYPES = {
   slower: { name: 'Slower ball', kph: [104, 117], swing: [-0.04, 0.04], seam: [-0.06, 0.06] },
   // Holds its line: no swing, no seam. After a few that move, it is the one that beats the bat.
   straight: { name: 'Straight ball', kph: [134, 145], swing: [-0.03, 0.03], seam: [-0.02, 0.02] },
+  // Spin (right-arm): swing is the drift in the air, seam the turn off the
+  // pitch (+ away from the right-hander), keep how much pace it keeps (grip
+  // or skid), h a change to the height at the stumps (dip and bounce).
+  offbreak: { name: 'Off-break', style: 'off', kph: [82, 92], swing: [0.02, 0.07], seam: [-0.5, -0.25], keep: 0.84 },
+  armball: { name: 'Arm ball', style: 'off', kph: [92, 100], swing: [0.06, 0.13], seam: [-0.03, 0.02], keep: 0.95, h: -0.06 },
+  carrom: { name: 'Carrom ball', style: 'off', kph: [84, 92], swing: [-0.02, 0.03], seam: [0.2, 0.35], keep: 0.88 },
+  quicker: { name: 'Quicker one', style: 'off', kph: [98, 106], swing: [0, 0.04], seam: [-0.12, -0.04], keep: 0.95, h: -0.1 },
+  legbreak: { name: 'Leg-break', style: 'leg', kph: [78, 90], swing: [-0.07, -0.02], seam: [0.3, 0.6], keep: 0.84 },
+  googly: { name: 'Googly', style: 'leg', kph: [78, 88], swing: [-0.05, 0], seam: [-0.45, -0.25], keep: 0.86 },
+  topspinner: { name: 'Top-spinner', style: 'leg', kph: [78, 88], swing: [-0.03, 0.02], seam: [-0.04, 0.04], keep: 0.88, h: 0.18 },
+  flipper: { name: 'Flipper', style: 'leg', kph: [90, 100], swing: [-0.02, 0.02], seam: [-0.03, 0.03], keep: 0.97, h: -0.2, fuller: 0.6 },
 };
+/** Spin types by the bowler's style. */
+export const SPIN_TYPES = { off: ['offbreak', 'armball', 'carrom', 'quicker'], leg: ['legbreak', 'googly', 'topspinner', 'flipper'] };
+export const isSpin = (type) => !!TYPES[type]?.style;
+export const STYLE_NAMES = { pace: 'Pace', off: 'Off-spin', leg: 'Leg-spin' };
 
 /** What a disguised ball is made to look like at the top of the run-up. */
-export const DISGUISE = { slower: 'outswinger', offcutter: 'inswinger', legcutter: 'outswinger', inswinger: 'outswinger', outswinger: 'inswinger' };
+export const DISGUISE = { slower: 'outswinger', offcutter: 'inswinger', legcutter: 'outswinger', inswinger: 'outswinger', outswinger: 'inswinger', googly: 'legbreak', flipper: 'legbreak', topspinner: 'legbreak', legbreak: 'googly', carrom: 'offbreak', armball: 'offbreak', quicker: 'offbreak', offbreak: 'carrom' };
 
 export const PLANS = {
   newBall: { name: 'New ball: full and swinging', field: 'attack', types: { outswinger: 4, inswinger: 2.2, legcutter: 0.8, offcutter: 0.6, bouncer: 0.7, yorker: 0.4, slower: 0.3, straight: 0.8 }, lengths: { full: 2.2, good: 3, short: 0.8 } },
@@ -29,6 +44,16 @@ export const PLANS = {
   shortBall: { name: 'Short-ball barrage', field: 'balanced', types: { bouncer: 3, offcutter: 1, legcutter: 1, outswinger: 0.8, slower: 0.8, yorker: 0.6, straight: 0.5 }, lengths: { good: 1, short: 3 } },
   stumps: { name: 'Attack the stumps', field: 'attack', types: { inswinger: 3, offcutter: 2, yorker: 1.5, outswinger: 1, slower: 0.8, bouncer: 0.5, straight: 2.2 }, lengths: { full: 2.5, good: 2.5, short: 0.5 } },
   death: { name: 'Death: yorkers and change-ups', field: 'death', types: { yorker: 3.4, slower: 2.2, bouncer: 1.2, offcutter: 1.2, legcutter: 0.8, outswinger: 0.5, straight: 0.6 }, lengths: { full: 1.5, good: 1.5, short: 1.2 } },
+};
+
+/**
+ * Spinners' overs: tossed up to turn it, flat darts at the stumps to keep it
+ * tight, or flat and wide at the death. Types are weights per style.
+ */
+export const SPIN_PLANS = {
+  flight: { name: 'Flight it and turn it', field: 'spinAttack', types: { off: { offbreak: 4, carrom: 1, armball: 1, quicker: 0.6 }, leg: { legbreak: 4, googly: 1.5, topspinner: 1, flipper: 0.5 } }, lengths: { full: 1.8, good: 3, short: 0.35 } },
+  darts: { name: 'Darts at the stumps', field: 'spinSave', types: { off: { offbreak: 2.5, quicker: 2, armball: 1.5, carrom: 0.6 }, leg: { legbreak: 2.5, flipper: 1.6, googly: 1.2, topspinner: 1 } }, lengths: { full: 1.2, good: 3.2, short: 0.3 } },
+  deathSpin: { name: 'Flat and quick, wide of off', field: 'death', types: { off: { quicker: 3, carrom: 1.5, armball: 1.5, offbreak: 1 }, leg: { flipper: 2.5, googly: 2, legbreak: 1.2, topspinner: 1 } }, lengths: { full: 2, good: 2.4, short: 0.3 } },
 };
 
 const LINE_W = {
@@ -40,6 +65,15 @@ const LINE_W = {
   yorker: { stumps: 3.5, off: 1.2, pads: 0.6, wide: 0.6 },
   slower: { stumps: 2, off: 2.4, wide: 0.6, pads: 0.3 },
   straight: { stumps: 3.5, off: 1.2, pads: 0.7, wide: 0.1 },
+  // A spinner aims where it will end up: the turn takes it from where it pitches.
+  offbreak: { stumps: 3, off: 2.4, pads: 0.4, wide: 0.3 },
+  armball: { off: 2.5, stumps: 2.5, pads: 0.3, wide: 0.3 },
+  carrom: { off: 2.6, stumps: 2, wide: 0.6, pads: 0.1 },
+  quicker: { stumps: 3.2, off: 1.6, pads: 0.5, wide: 0.2 },
+  legbreak: { off: 3, stumps: 2.2, wide: 0.8, pads: 0.15 },
+  googly: { stumps: 3, off: 1.8, pads: 0.5, wide: 0.1 },
+  topspinner: { stumps: 2.6, off: 2.2, pads: 0.3, wide: 0.2 },
+  flipper: { stumps: 3.5, off: 1.2, pads: 0.4, wide: 0.1 },
 };
 
 /**
@@ -62,6 +96,7 @@ export function planOver(m, memory, rng) {
   const rr = need / Math.max(1, (overs * GAME.ballsPerOver - m.balls) / 6);
   // The new ball for the first fifth of the innings, the death for the last.
   const phase = Math.max(1, Math.round(overs * 0.2));
+  if (m.style && m.style !== 'pace') return planSpin(m, rng, { rr, left, phase });
   let w;
   if (m.superOver) w = { death: 4, stumps: 0.6 };
   else if (over === 0) w = { newBall: 4, stumps: 1, channel: 0.6 };
@@ -85,6 +120,21 @@ export function planOver(m, memory, rng) {
   return { key, name: plan.name, field, side };
 }
 
+/** A spinner's over: flight when the batter is struggling, darts when he is going, flat at the death. */
+function planSpin(m, rng, { rr, left, phase }) {
+  const w = { flight: 2.6, darts: 1.8, deathSpin: 0.1 };
+  if (left <= phase) Object.assign(w, { deathSpin: 3, darts: 1.5, flight: 0.4 });
+  if (rr < 7) w.flight += 1.5;
+  if (rr > 11) { w.darts += 1.5; w.deathSpin += 1; }
+  const key = rng.weighted(w);
+  const plan = SPIN_PLANS[key];
+  let field = plan.field;
+  if (rr > 12 && field === 'spinAttack') field = 'spinSave';
+  // Off-spin goes round the wicket to the right-hander now and then (the angle away, then the turn back in).
+  const side = rng() < (m.style === 'off' ? 0.3 : 0.1) ? 'round' : 'over';
+  return { key, name: plan.name, field, side, style: m.style, types: plan.types[m.style] };
+}
+
 export function newMemory() {
   return { zone: {}, lastBall: null, ballsToBatter: 0, shortRuns: 0 };
 }
@@ -101,7 +151,9 @@ export function remember(memory, spec, runs, out) {
 }
 
 export function chooseDelivery(m, plan, memory, rng) {
-  const P = PLANS[plan.key];
+  const P = PLANS[plan.key] ?? SPIN_PLANS[plan.key];
+  const spin = !!plan.style && plan.style !== 'pace';
+  if (spin) return chooseSpin(m, plan, P, memory, rng);
   const tw = { ...P.types };
   const last = memory.lastBall;
   if (last && last.runs >= 4) {
@@ -190,6 +242,83 @@ export function chooseDelivery(m, plan, memory, rng) {
     swing,
     seam,
     keep: C.keep,
+    side,
+    surprise,
+  };
+}
+
+/**
+ * A spinner's ball: the type for the plan (a dart after he has been hit, the
+ * stock ball to a new batter), a fuller length, a line, and the turn, which a
+ * dry pitch adds to. Same spec shape as the seamers'.
+ */
+function chooseSpin(m, plan, P, memory, rng) {
+  const C = m.cond ?? NEUTRAL;
+  const tw = { ...plan.types };
+  const last = memory.lastBall;
+  const stock = plan.style === 'off' ? 'offbreak' : 'legbreak';
+  const dart = plan.style === 'off' ? 'quicker' : 'flipper';
+  if (last && last.runs >= 4) tw[dart] = (tw[dart] ?? 0) + 1.4;
+  if (memory.ballsToBatter < 2) tw[stock] = (tw[stock] ?? 0) + 2;
+  const type = rng.weighted(tw);
+  const T = TYPES[type];
+  const lw = { ...P.lengths };
+  for (const L of Object.keys(lw)) {
+    let rpb = 0, n = 0;
+    for (const ln of Object.keys(LINES)) {
+      const z = memory.zone[`${L}:${ln}`];
+      if (z) { rpb += z.runs; n += z.balls; }
+    }
+    if (n >= 2) lw[L] *= Math.max(0.35, 1.3 - (rpb / n) / 3);
+  }
+  const length = rng.weighted(lw);
+  const lineW = { ...LINE_W[type] };
+  for (const ln of Object.keys(lineW)) {
+    const z = memory.zone[`${length}:${ln}`];
+    if (z && z.balls >= 2) lineW[ln] *= Math.max(0.3, 1.25 - (z.runs / z.balls) / 3.5) + z.outs * 0.6;
+  }
+  const line = rng.weighted(lineW);
+  // A spinner's good length is fuller than a seamer's; the flipper fuller still.
+  const band = LENGTHS[length];
+  const aimLen = rng.range(...band) - (length === 'good' ? 0.6 : 0) - (T.fuller ?? 0);
+  const aimLine = rng.range(...LINES[line]);
+  let lenM = Math.max(0.9, aimLen + (rng() - 0.5) * 2 * 0.3);
+  let lineZ = aimLine + (rng() - 0.5) * 0.1;
+  if (rng() < 0.02) lineZ = rng() < 0.5 ? rng.range(0.92, 1.0) : rng.range(-0.8, -0.74);
+  const actualLen = lengthOf(lenM);
+  const side = rng() < 0.05 ? (plan.side === 'round' ? 'over' : 'round') : plan.side ?? 'over';
+  const turn = C.turn ?? 1;
+  const swing = rng.range(...T.swing) + C.wind.z * 0.02; // slower through the air: the wind moves it more
+  const seam = rng.range(...T.seam) * (Math.abs(T.seam[0]) > 0.1 ? turn : 1);
+  const kph = Math.round(rng.range(...T.kph) * (1 - C.wind.x * 0.004));
+  const b2 = LENGTHS[actualLen];
+  const u = Math.min(1, Math.max(0, (lenM - b2[0]) / (b2[1] - b2[0])));
+  const [h0, h1] = HEIGHTS[actualLen];
+  const pv = (rng() + rng() - 1) * 0.1;
+  let pitchVar = pv * C.uneven;
+  if (C.uneven > 1 && rng() < 0.05 * (C.uneven - 1)) pitchVar += rng() < 0.6 ? -0.2 : 0.22;
+  const surprise = pitchVar - pv;
+  const h = h0 + (h1 - h0) * (0.15 + 0.7 * u) + pitchVar + (T.h ?? 0);
+  const hStumps = Math.max(0.05, 0.1 + (h - 0.1) * C.bounce);
+  return {
+    type,
+    typeName: T.name,
+    style: plan.style,
+    spin: true,
+    kph,
+    length: actualLen,
+    aimed: length,
+    aimedLine: line,
+    aimLenM: aimLen,
+    aimLineZ: aimLine,
+    lenM,
+    line: lineOf(lineZ),
+    lineZ,
+    hStumps,
+    swing,
+    seam,
+    // A turning pitch grips the slow ball more; the skidders keep their pace.
+    keep: Math.min(0.98, T.keep * (C.keep / 0.9) ** 0.5),
     side,
     surprise,
   };

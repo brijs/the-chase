@@ -9,6 +9,9 @@ import { describeConditions, WIND, WIND_DIR } from './conditions.js';
  * legend (H), and the intro / pause / result cards. Messages are keyed to game
  * time, so they line up with the play at any speed.
  */
+/** Where the diorama lives: this page without ?mode=game, or its own page on the published site. */
+const DIORAMA_URL = typeof window !== 'undefined' && window.__DIORAMA_URL ? window.__DIORAMA_URL : '?mode=diorama';
+
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; font: 13px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #2a211c; z-index: 5; }
 #hud .panel { background: rgba(246, 242, 230, 0.94); border: 1px solid #c9bfa4; border-radius: 8px; box-shadow: 0 2px 10px rgba(23, 26, 24, 0.12); }
@@ -246,7 +249,7 @@ export function createHud({ hidden = false, onPick, onFormat, onStart, onPad, on
       const n = Math.floor(m.balls / 6) + 1;
       later(t, () => {
         const out = m.field.filter((f) => f.out).length;
-        planEl.innerHTML = `<div class="k">OVER ${n} OF ${m.overs}${m.inPowerplay?.() ? ' · <b style="color:#9a2731">POWERPLAY</b>' : ''} · THE BOWLER'S PLAN</div>${plan.name}${plan.side === 'round' ? ' · <b>round the wicket</b>' : ''}<div class="k" style="margin-top:4px">FIELD · ${plan.field.toUpperCase()} · ${out} OUT${m.maxOut?.() < Infinity ? ` (MAX ${m.maxOut()})` : ''}</div>`;
+        planEl.innerHTML = `<div class="k">OVER ${n} OF ${m.overs}${m.inPowerplay?.() ? ' · <b style="color:#9a2731">POWERPLAY</b>' : ''} · ${plan.style && plan.style !== 'pace' ? (plan.style === 'off' ? 'OFF-SPIN' : 'LEG-SPIN') : 'PACE'}: THE BOWLER'S PLAN</div>${plan.name}${plan.side === 'round' ? ' · <b>round the wicket</b>' : ''}<div class="k" style="margin-top:4px">FIELD · ${plan.field.replace(/^spin(\w)/, (_, c) => `SPIN ${c}`).toUpperCase()}${plan.style && plan.style !== 'pace' ? ' · KEEPER UP' : ''} · ${out} OUT${m.maxOut?.() < Infinity ? ` (MAX ${m.maxOut()})` : ''}</div>`;
         planEl.classList.add('on');
         hud.score(m, t);
       });
@@ -285,7 +288,7 @@ export function createHud({ hidden = false, onPick, onFormat, onStart, onPad, on
           ${other ? `<p class="small">${other}</p>` : ''}
           <p class="small">Fours ${m.fours} · Sixes ${m.sixes} · Extras ${m.extras} · ${DIFFICULTY[m.difficulty].label}</p>
           <div class="row"><button class="go" data-act="again">${m.result === 'tied' ? 'Super over' : 'New match'} (Enter)</button></div>
-          <p class="small"><a href="?">Watch the diorama</a></p>`;
+          <p class="small"><a href="${DIORAMA_URL}">Watch the diorama</a></p>`;
         card.classList.add('on');
         card.querySelector('[data-act=again]').onclick = () => onStart?.();
         call.className = '';
@@ -310,7 +313,7 @@ export function createHud({ hidden = false, onPick, onFormat, onStart, onPad, on
         <p class="small">During the run-up an amber marker shows where the ball is <i>aimed</i> to pitch, with its line and type. Read it, then watch the ball: bowlers miss their spot, and on harder levels the read comes later, vaguer, and sometimes lies.</p>
         <p class="small">Hold the arrows for a direction, press <b>D</b> to play along the ground or <b>A</b> to loft it. No key is a leave. <b>S</b> plays a special: sweep, <b>S</b>+← reverse sweep, <b>S</b>+↑ scoop. They pay well and need tighter timing.<br>Time it so the bat meets the ball: early drags it leg side, late finds the edge.</p>
         <div class="row"><button class="go" data-act="go">Toss (Enter)</button><button data-act="nets">Calibrate in the nets (N)</button><button data-act="tune">Tuning (T)</button><button data-act="controller">🎮 Controller (K)</button></div>
-        <p class="small"><a href="?">Back to the diorama</a> · C camera · Space skip · G timing meter · M sound</p>`;
+        <p class="small"><a href="${DIORAMA_URL}">Back to the diorama</a> · C camera · Space skip · G timing meter · M sound</p>`;
       card.classList.add('on');
       card.querySelectorAll('[data-diff]').forEach((b) => (b.onclick = () => onPick?.(b.dataset.diff)));
       card.querySelectorAll('[data-format]').forEach((b) => (b.onclick = () => onFormat?.(+b.dataset.format)));
@@ -323,7 +326,7 @@ export function createHud({ hidden = false, onPick, onFormat, onStart, onPad, on
     },
     pause(on) {
       if (on) {
-        card.innerHTML = `<h1>Paused</h1><p>P or Esc to carry on.</p><p class="small"><a href="?">Leave for the diorama</a></p>`;
+        card.innerHTML = `<h1>Paused</h1><p>P or Esc to carry on.</p><p class="small"><a href="${DIORAMA_URL}">Leave for the diorama</a></p>`;
         card.classList.add('on');
       } else card.classList.remove('on');
     },

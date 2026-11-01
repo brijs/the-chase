@@ -1,4 +1,4 @@
-import { G, BALL_REAL_R, RELEASE_PT, STUMPS_X, KEEPER_HOME } from './rules.js';
+import { G, BALL_REAL_R, RELEASE_PT, STUMPS_X, KEEPER_HOME, KEEPER_STANDING_UP } from './rules.js';
 import { BALL_R } from '../config.js';
 
 /**
@@ -150,7 +150,8 @@ export function buildDelivery(spec, paceK = 0.8, rel = RELEASE_PT) {
     return null;
   }
 
-  const tKeeper = timeAtX(KEEPER_HOME.x + 0.6);
+  // Up to the stumps for spin, back for pace.
+  const tKeeper = timeAtX((spec.spin ? KEEPER_STANDING_UP.x : KEEPER_HOME.x) + 0.6);
   return {
     spec,
     speed: v,

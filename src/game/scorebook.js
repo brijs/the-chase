@@ -15,21 +15,38 @@ const LAST = ['Raghavan', 'Menon', 'Kulkarni', 'Iyer', 'Siddiqui', 'Qureshi', 'M
 const PLACE = ['Harbourside', 'Kingsbridge', 'Marlow', 'Eastwick', 'Riverton', 'Ashcombe', 'Northgate', 'Fernhill', 'Westerly', 'Copper Bay', 'Highfield', 'Larkspur'];
 const MASCOT = ['Kestrels', 'Mariners', 'Rovers', 'Stags', 'Falcons', 'Otters', 'Comets', 'Lancers', 'Herons', 'Corsairs', 'Wolves', 'Pilots'];
 const FIELD_IDS = ['slip1', 'slip2', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7'];
-const BOWLING_ORDER = [0, 1, 0, 2, 1]; // overs 1-5: openers, first change, opener again
+const BOWLING_ORDER = [0, 1, 2, 0, 1]; // overs 1-5: the openers, the spinner in the middle, the openers to finish
 
-/** Who bowls each over: nobody twice running, a cap each. */
-export function bowlingOrder(overs) {
-  if (overs <= 5) return BOWLING_ORDER;
+/**
+ * The attack's styles by bowler: three seamers, an off-spinner and a
+ * leg-spinner (five overs: two seamers and one spinner, off or leg by the
+ * seed). spin: false (QA) makes them all seamers.
+ */
+export function attackStyles(overs, seed = 1, spin = true) {
+  if (!spin) return ['pace', 'pace', 'pace', 'pace', 'pace'];
+  if (overs <= 5) return ['pace', 'pace', seed % 2 ? 'off' : 'leg'];
+  return ['pace', 'pace', 'off', 'pace', 'leg'];
+}
+
+/**
+ * Who bowls each over: nobody twice running, a cap each. With styles, the
+ * seamers take the new ball and the death and the spinners the middle overs.
+ */
+export function bowlingOrder(overs, styles = null) {
+  if (overs <= 5) return BOWLING_ORDER.slice(0, Math.max(1, overs));
   const cap = overs <= 10 ? 2 : 4;
   const left = [cap, cap, cap, cap, cap];
   const order = [];
+  const edge = Math.max(1, Math.round(overs * 0.2));
   for (let o = 0; o < overs; o++) {
     // Most overs left first (so the caps always work out), a nudge toward
     // whoever bowled from this end two overs ago, never the same bowler twice.
     const prev = order[o - 1];
     const spell = order[o - 2];
+    const middle = o >= edge && o < overs - edge;
+    const fit = (i) => (!styles ? 0 : (styles[i] === 'pace') === !middle ? 0.9 : 0);
     const pick = left
-      .map((n, i) => ({ i, score: n + (i === spell ? 0.6 : 0) - i * 0.01 }))
+      .map((n, i) => ({ i, score: n + fit(i) + (i === spell ? 0.6 : 0) - i * 0.01 }))
       .filter(({ i }) => left[i] > 0 && i !== prev)
       .sort((a, b) => b.score - a.score)[0].i;
     left[pick]--;
@@ -38,7 +55,7 @@ export function bowlingOrder(overs) {
   return order;
 }
 
-export function createScorebook(seed, { aiBats = false, overs = 5 } = {}) {
+export function createScorebook(seed, { aiBats = false, overs = 5, spin = true } = {}) {
   const rng = makeRng(seed * 7919 + 11);
   const used = new Set();
   const person = () => {
@@ -63,7 +80,8 @@ export function createScorebook(seed, { aiBats = false, overs = 5 } = {}) {
   const theirs = team();
   const [bat, bowl] = aiBats ? [theirs, yours] : [yours, theirs];
   const keeper = bowl.xi[5];
-  const order = bowlingOrder(overs);
+  const styles = attackStyles(overs, seed, spin);
+  const order = bowlingOrder(overs, styles);
   const bowlerNames = [bowl.xi[8], bowl.xi[9], bowl.xi[7], bowl.xi[10], bowl.xi[6]].slice(0, Math.max(...order) + 1);
   const short = (n) => n.split(' ').slice(1).join(' ');
 
@@ -73,7 +91,7 @@ export function createScorebook(seed, { aiBats = false, overs = 5 } = {}) {
     overs,
     keeper,
     batters: bat.xi.map((name) => ({ name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false, how: '', batted: false })),
-    bowlers: bowlerNames.map((name) => ({ name, balls: 0, runs: 0, wkts: 0, maidens: 0, overRuns: 0 })),
+    bowlers: bowlerNames.map((name, i) => ({ name, style: styles[i], balls: 0, runs: 0, wkts: 0, maidens: 0, overRuns: 0 })),
     actor: { batterA: 0, nonStriker: 1 },
     next: 2,
     fow: [],

@@ -44,6 +44,29 @@ export const FIELD_PRESETS = {
     ['Fine leg', -152, 'deep'],
     ['Cover', 60, 13.0],
   ],
+  // Spin: the keeper is up, a slip beside him and a bat-pad; or (spinSave) everyone saving one, two out on the leg side.
+  spinAttack: [
+    ['Slip', 168, 3.4],
+    ['Short leg', -112, 4.2],
+    ['Point', 96, 12.0],
+    ['Cover', 50, 13.0],
+    ['Mid-off', 14, 14.5],
+    ['Mid-on', -14, 14.5],
+    ['Midwicket', -56, 13.0],
+    ['Deep square', -98, 'deep'],
+    ['Long-on', -12, 'deep'],
+  ],
+  spinSave: [
+    ['Short third', 145, 10.0],
+    ['Point', 96, 13.0],
+    ['Cover', 50, 13.5],
+    ['Long-off', 12, 'deep'],
+    ['Long-on', -12, 'deep'],
+    ['Midwicket', -56, 13.5],
+    ['Square leg', -100, 13.0],
+    ['Deep midwicket', -52, 'deep'],
+    ['Fine leg', -152, 'deep'],
+  ],
 };
 
 /** Deep fielders brought up to save one when the restrictions bite, first to last, and what they become. */

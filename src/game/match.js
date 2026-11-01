@@ -6,6 +6,7 @@ import { fieldPositions, resolveFielding } from './fielding.js';
 import { setTarget, planOver, chooseDelivery, newMemory, remember, TYPES } from './bowlerAI.js';
 import { resolveConditions, NEUTRAL } from './conditions.js';
 import { decideLbw, decideEdgeCatch, decidePhantomEdge } from './umpire.js';
+import { attackStyles, bowlingOrder } from './scorebook.js';
 
 /**
  * The scorebook and one-ball resolution, independent of any rendering. The
@@ -28,7 +29,11 @@ import { decideLbw, decideEdgeCatch, decidePhantomEdge } from './umpire.js';
  * for the AI's own target, or null to bat first (no target: the innings
  * simply ends, result 'innings'). superOver: one over, two wickets.
  */
-export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null, umpire = null, format = 5, target, superOver = false } = {}) {
+/**
+ * attack: the bowlers' styles ('pace' | 'off' | 'leg', by bowler; default from
+ * the seed, as the scorebook has it); spin: false makes them all seamers (QA).
+ */
+export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null, umpire = null, format = 5, target, superOver = false, attack = null, spin = true } = {}) {
   const diff = DIFFICULTY[difficulty];
   const rng = makeRng(seed);
   const m = {
@@ -74,7 +79,13 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
   /** How many fielders may be outside the circle this over (none of it in the nets). */
   m.maxOut = () => (m.nets ? Infinity : m.inPowerplay() ? MAX_OUT.powerplay : MAX_OUT.after);
 
+  // Who bowls which over, and how: the seamers open and close, the spinners bowl the middle.
+  m.attack = attack ?? attackStyles(m.overs, seed, spin);
+  m.order = bowlingOrder(m.overs, m.attack);
+  m.bowlerOf = (over = Math.floor(m.balls / GAME.ballsPerOver)) => m.order[Math.min(over, m.order.length - 1)];
+
   m.startOver = () => {
+    m.style = nets ? 'pace' : m.attack[m.bowlerOf()] ?? 'pace';
     m.plan = planOver(m, m.memory, rng);
     m.field = fieldPositions(m.plan.field, { maxOut: m.maxOut() });
     m.thisOver = [];
@@ -90,6 +101,13 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
       spec.length = lengthOf(spec.lenM);
       spec.line = lineOf(spec.lineZ);
       spec.typeName = TYPES[spec.type]?.name ?? spec.typeName;
+      // Pace or spin follows the forced type (its grip on the pitch too).
+      const T = TYPES[spec.type];
+      if (T) {
+        spec.style = T.style ?? 'pace';
+        spec.spin = !!T.style;
+        if (force.keep == null) spec.keep = T.style ? T.keep : m.cond.keep;
+      }
       // A forced ball is over the wicket unless it says otherwise ('auto': the AI's choice).
       spec.side = force.side === 'auto' ? aiSide : force.side ?? 'over';
     }

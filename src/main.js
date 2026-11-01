@@ -26,6 +26,7 @@ import { startGame } from './game/index.js';
  *   ?rs=1      render scale (default 2)
  *   ?ui=0      hide the viewer bar (also hidden under automation)
  *   ?mode=game play the Chase (src/game/index.js): you bat, the AI bowls
+ *              (the default on the published site; ?mode=diorama for this)
  *
  * Viewer: drag to rotate, scroll/pinch to zoom, right-drag to pan, Space to
  * pause, [ ] for speed, R to reset to the locked diorama view.
@@ -63,7 +64,9 @@ if (post.uniforms.uPalette.value.length !== PALETTE_HEX.length || PALETTE_HEX.le
   throw new Error(`palette length ${PALETTE_HEX.length} does not match the shader's uPalette[64]`);
 }
 
-if (params.get('mode') === 'game') startGame({ renderer, post, scene, camera, canvas, params });
+// The published site opens on the game (window.__CHASE_MODE); ?mode=diorama still shows the diorama.
+const mode = params.get('mode') ?? window.__CHASE_MODE ?? 'diorama';
+if (mode === 'game') startGame({ renderer, post, scene, camera, canvas, params });
 else runDiorama();
 
 function runDiorama() {

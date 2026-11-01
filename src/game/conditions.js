@@ -34,11 +34,11 @@ export const WIND_DIR = {
   legSide: { name: 'toward the leg side', short: 'to leg', v: [0, -1] },
 };
 export const PITCH = {
-  flat: { name: 'Flat road', seam: 0.6, bounce: 0.95, uneven: 0.6, keep: 0.93, color: '#dccb98' },
-  standard: { name: 'Good cricket pitch', seam: 1.0, bounce: 1.0, uneven: 1.0, keep: 0.9, color: '#d8c592' },
-  green: { name: 'Green top', seam: 1.7, bounce: 1.1, uneven: 1.2, keep: 0.92, color: '#b9c483' },
-  dusty: { name: 'Dry and dusty', seam: 1.25, bounce: 0.86, uneven: 1.7, keep: 0.86, color: '#ccb27a' },
-  cracked: { name: 'Cracked', seam: 1.35, bounce: 1.0, uneven: 2.5, keep: 0.89, color: '#c8b685' },
+  flat: { name: 'Flat road', seam: 0.6, turn: 0.75, bounce: 0.95, uneven: 0.6, keep: 0.93, color: '#dccb98' },
+  standard: { name: 'Good cricket pitch', seam: 1.0, turn: 1.0, bounce: 1.0, uneven: 1.0, keep: 0.9, color: '#d8c592' },
+  green: { name: 'Green top', seam: 1.7, turn: 0.7, bounce: 1.1, uneven: 1.2, keep: 0.92, color: '#b9c483' },
+  dusty: { name: 'Dry and dusty', seam: 1.25, turn: 1.6, bounce: 0.86, uneven: 1.7, keep: 0.86, color: '#ccb27a' },
+  cracked: { name: 'Cracked', seam: 1.35, turn: 1.3, bounce: 1.0, uneven: 2.5, keep: 0.89, color: '#c8b685' },
 };
 export const OUTFIELD = {
   slow: { name: 'Slow, lush', roll: 1.35 },
@@ -85,6 +85,7 @@ export function resolveConditions(sel = {}) {
     sel: c,
     swing: sky.swing,
     seam: pitch.seam,
+    turn: pitch.turn ?? 1,
     bounce: pitch.bounce,
     uneven: pitch.uneven,
     keep: pitch.keep,

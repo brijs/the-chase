@@ -17,6 +17,8 @@ import { GAME_FIT_POINTS } from './gameGround.js';
  *             rope instead of losing it under the lens
  *   settle    when the ball is dead it glides back to the wide shot
  *   diorama   C: the locked 45/33 three-quarter view, fitted to the whole oval
+ *   orbit     the title screen: a slow drift round the ground, high up; back
+ *             to broadcast it glides down from wherever it is
  *
  * Every move eases (critically damped toward a target framing), so the
  * camera's path is continuous.
@@ -36,6 +38,7 @@ export function createDirector(camera) {
   let blend = 0; // 0 broadcast .. 1 diorama
   let aspect = 1.6;
   let shot = 'wide'; // which framing the camera is heading for
+  let orbitT = 0;
 
   function fitDiorama(a) {
     aspect = a;
@@ -61,6 +64,21 @@ export function createDirector(camera) {
    */
   function update(dt, ctx = {}) {
     if (mode === 'manual') return; // QA owns the camera
+    if (mode === 'orbit') {
+      orbitT += dt;
+      const a = 0.9 + orbitT * 0.06;
+      cur.pos.set(-1 + Math.cos(a) * 44, 12 + Math.sin(orbitT * 0.21) * 2, Math.sin(a) * 36);
+      cur.target.set(-2, 3.2, 0);
+      cur.fov = fovFor(36);
+      camera.position.copy(cur.pos);
+      camera.fov = cur.fov;
+      camera.aspect = aspect;
+      camera.near = 0.5;
+      camera.far = 330;
+      camera.lookAt(cur.target);
+      camera.updateProjectionMatrix();
+      return;
+    }
     const { t, T0, tR, tC, ball, path } = ctx;
     let next = 'wide';
     if (ctx.board) next = 'board';
@@ -90,18 +108,43 @@ export function createDirector(camera) {
       const toward = Math.max(0, ball.x - STRIKER.x); // metres toward the bowler's end
       const side = ball.z;
       const away = Math.hypot(ball.x - STRIKER.x, ball.z - STRIKER.z);
-      // (The pull-back is capped so the lens never ends up past the slab's edge.)
-      want.pos.set(TIGHT.pos.x + Math.min(4, 0.15 * toward), TIGHT.pos.y + 0.6 * toward + 0.12 * Math.abs(side), TIGHT.pos.z + 0.3 * side);
+      if (path?.six && path.to && path.to.x > 4) {
+        // A six back over the bowler: the view from the stands it is heading
+        // for. The camera stands off past where it lands, a little to one
+        // side and up, and watches it come in, landing and all.
+        const to = path.to;
+        const dx = to.x - STRIKER.x;
+        const dz = to.z - STRIKER.z;
+        const n = Math.hypot(dx, dz) || 1;
+        const lat = to.z >= 0 ? 1 : -1;
+        want.pos.set(to.x + (dx / n) * 13 - (dz / n) * 6 * lat, (to.y ?? 0) + 8.5, to.z + (dz / n) * 13 + (dx / n) * 6 * lat);
+        want.target.copy(ball).lerp(new THREE.Vector3(to.x, to.y ?? 0, to.z), 0.4);
+        want.target.y = Math.max(1, want.target.y);
+        const dist = want.pos.distanceTo(want.target);
+        const span = Math.max(14, Math.hypot(ball.x - to.x, ball.z - to.z) * 0.9 + ball.y);
+        want.fov = Math.max(TIGHT.fov, Math.min(62, (2 * Math.atan(span / 2 / dist) * 180) / Math.PI));
+        want.fov = fovFor(want.fov);
+        const s1 = 1 - Math.exp(-dt * 2.6);
+        cur.pos.lerp(want.pos, s1);
+        cur.target.lerp(want.target, 1 - Math.exp(-dt * 6));
+        cur.fov += (want.fov - cur.fov) * s1;
+        return place();
+      }
+      // (A four's pull-back is capped at the boards; a six, heading into the
+      // stands, takes the camera back and up over them so the landing stays in shot.)
+      const six = !!path?.six;
+      const back = six ? Math.min(18, 0.45 * toward) : Math.min(4, 0.15 * toward);
+      want.pos.set(TIGHT.pos.x + back, TIGHT.pos.y + (six ? 0.75 : 0.6) * toward + (six ? 0.2 : 0.12) * Math.abs(side) + (six ? 0.04 * away : 0), TIGHT.pos.z + 0.3 * side);
       want.target.copy(ball);
-      if (path?.to) want.target.lerp(new THREE.Vector3(path.to.x, 0, path.to.z), 0.18);
+      if (path?.to) want.target.lerp(new THREE.Vector3(path.to.x, path.to.y ?? 0, path.to.z), six ? 0.3 : 0.18);
       // Keep the striker's end in the first moments, then let it go.
       const keepStriker = Math.max(0, 1 - away / 14);
       want.target.lerp(TIGHT.target, 0.45 * keepStriker);
-      want.target.y = Math.min(6, ball.y * 0.6 + 0.2);
-      // Lens: show ~12 m around the ball, more early on while the striker is in shot.
+      want.target.y = six ? Math.min(9, ball.y * 0.7 + 0.5) : Math.min(6, ball.y * 0.6 + 0.2);
+      // Lens: show ~12 m around the ball (a six: its height too), more early on while the striker is in shot.
       const dist = want.pos.distanceTo(want.target);
-      const span = 12 + 18 * keepStriker;
-      want.fov = Math.max(TIGHT.fov, Math.min(48, (2 * Math.atan(span / 2 / dist) * 180) / Math.PI));
+      const span = 12 + 18 * keepStriker + (six ? 6 + ball.y * 1.2 : 0);
+      want.fov = Math.max(TIGHT.fov, Math.min(six ? 62 : 48, (2 * Math.atan(span / 2 / dist) * 180) / Math.PI));
     } else if (shot === 'follow') {
       setFrom(want, TIGHT, TIGHT, 0);
     } else {
@@ -118,6 +161,8 @@ export function createDirector(camera) {
     cur.target.lerp(want.target, s2);
     cur.fov += (want.fov - cur.fov) * s1;
 
+    place();
+    function place() {
     blend += ((mode === 'diorama' ? 1 : 0) - blend) * (1 - Math.exp(-dt * 6));
     if (Math.abs(blend - (mode === 'diorama' ? 1 : 0)) < 1e-3) blend = mode === 'diorama' ? 1 : 0;
     const b = blend * blend * (3 - 2 * blend);
@@ -126,9 +171,10 @@ export function createDirector(camera) {
     camera.fov = cur.fov + (dio.fov - cur.fov) * b;
     camera.aspect = aspect;
     camera.near = 0.5;
-    camera.far = 260;
+    camera.far = 330;
     camera.lookAt(tgt);
     camera.updateProjectionMatrix();
+    }
   }
   return {
     update,
@@ -137,9 +183,10 @@ export function createDirector(camera) {
       mode = mode === 'broadcast' ? 'diorama' : 'broadcast';
       return mode;
     },
-    set(m) {
+    /** opts.glide: ease from the current view instead of jumping. */
+    set(m, opts = {}) {
       mode = m;
-      blend = m === 'diorama' ? 1 : 0;
+      if (!opts.glide) blend = m === 'diorama' ? 1 : 0;
     },
     get mode() {
       return mode;

@@ -24,6 +24,7 @@ if (process.env.CAL) {
  *   slogger always plays, lofts everything, timing ~ N(0, 45 ms)
  */
 const GAMES = +(process.env.GAMES || 300);
+const FORMAT = +(process.env.FORMAT || 5); // overs (5, 10, 20); SPIN=0 for an all-pace attack
 // COND='{"sky":"overcast","pitch":"green"}' plays every game in those conditions.
 const COND = process.env.COND ? JSON.parse(process.env.COND) : null;
 if (COND) console.log('conditions', JSON.stringify(COND));
@@ -54,7 +55,7 @@ function bot(kind, r) {
 }
 
 function play(difficulty, kind, seed) {
-  const m = createMatch({ difficulty, seed, conditions: COND, umpire: UMP });
+  const m = createMatch({ difficulty, seed, conditions: COND, umpire: UMP, format: FORMAT, spin: process.env.SPIN !== '0' });
   const r = makeRng(seed * 7 + 3);
   const b = bot(kind, r);
   const tally = {};

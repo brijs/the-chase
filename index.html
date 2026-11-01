@@ -30,6 +30,8 @@
   @media (max-width: 620px) {
     #frame { width: 94vw; height: 94vh; }
   }
+  /* The game fills the window (the diorama keeps its framed slab on paper). */
+  body.game #frame { left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; transform: none; }
   #stage {
     display: block;
     width: 100%;

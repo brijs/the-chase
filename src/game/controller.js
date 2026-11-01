@@ -17,9 +17,9 @@ import { Plan } from './plan.js';
 import { createMatch, describeDelivery } from './match.js';
 import { SHOTS, shotFor } from './batting.js';
 import { simulateBatted, sampleAt } from './ballSim.js';
-import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, GATE_PT, GATE_OUT, ROUND_DZ } from './rules.js';
+import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, KEEPER_STANDING_UP, GATE_PT, GATE_OUT, ROUND_DZ, standHeight } from './rules.js';
 import { fieldPositions, FK } from './fielding.js';
-import { TYPES, DISGUISE } from './bowlerAI.js';
+import { TYPES, DISGUISE, STYLE_NAMES } from './bowlerAI.js';
 import { lineOf } from './delivery.js';
 import { STUMPS_X } from './rules.js';
 import { SCALES } from './tuning.js';
@@ -45,13 +45,20 @@ const NS_CROSS = [10.35, 0];
 const UMP_BASE = [12.75, -0.28];
 // Round the wicket the bowler runs in where the umpire stood: he steps across.
 const UMP_ROUND_Z = 0.42;
-const KEEP = [KEEPER_HOME.x, KEEPER_HOME.z];
+const KEEP_BACK = [KEEPER_HOME.x, KEEPER_HOME.z];
+const KEEP_UP = [KEEPER_STANDING_UP.x, KEEPER_STANDING_UP.z];
+// The keeper's spot: back for the seamers, up to the stumps for the spinners (set per ball).
+let KEEP = KEEP_BACK;
 const KEEP_ST = [KEEPER_AT_STUMPS.x, KEEPER_AT_STUMPS.z];
 const FT_END = [5.4, 1.9];
 const FT_YAW = Math.atan2(FT_END[0] - 10.05, FT_END[1] - 0.52);
 const BOWL_YAW_RUN = -PI / 2;
 const YAW_FIELD = 1.62;
 const RUN_UP = 2.45;
+// The spinner's short run: his mark, the takeoff into the bound (stage.js), and how long the approach takes.
+const SPIN_MARK = { x: 16.3, z: 0.56 };
+const RUN_TAKEOFF = 11.9;
+const SPIN_APPROACH = 1.6;
 const READY = 0.45; // pause at the mark before the run-up
 /** Running between the wickets: crease ends and lanes either side of the strip. */
 const END_S = -7.95;
@@ -239,6 +246,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
 
   const ballPlan = new Plan(() => ({ hold: ['bowler', 'L'] }));
   function initPlans(t) {
+    KEEP = KEEP_BACK;
     for (const name of ['bowler', 'keeper', 'umpire', ...BATTERS, ...FIELDERS]) plans[name] = new Plan(() => null);
     homes.bowler = { x: MARK.x, z: MARK.z, yaw: BOWL_YAW_RUN };
     homes.keeper = { x: KEEP[0], z: KEEP[1], yaw: YAW_FIELD };
@@ -290,6 +298,36 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     ballPlan.add(t0, t1, (t) => ({ pos: fn(t - t0), flying: true }), 'throw' + t0);
   }
 
+  /**
+   * The spinner: a few easy strides in from SPIN_MARK, then the script's own
+   * bound (a smaller hop), delivery stride and follow-through, released at tR
+   * like everyone else. The approach borrows the run-up's pose at the same
+   * distance from the crease, so the legs match the ground covered.
+   */
+  function spinnerAt(t, tR, T0, from) {
+    const u = t - tR;
+    if (u >= -0.45) {
+      const s = bowlerAt(SCRIPT_REL + u);
+      return u < -0.18 ? { ...s, lift: (s.lift ?? 0) * 0.45 } : s;
+    }
+    const t1 = tR - SPIN_APPROACH;
+    if (t < t1) {
+      const stand = bowlerAt(SCRIPT_REL - 2.6).pose;
+      if (Math.hypot(from[0] - SPIN_MARK.x, from[1] - SPIN_MARK.z) > 0.3) {
+        const tw = Math.min(t1 - 0.15, T0 + 1.2);
+        if (t < tw) return walkLeg(t, T0, tw, from, [SPIN_MARK.x, SPIN_MARK.z], { fromYaw: BOWL_YAW_RUN, toYaw: BOWL_YAW_RUN, turn: 0.25 });
+      }
+      return { x: SPIN_MARK.x, z: SPIN_MARK.z, yaw: BOWL_YAW_RUN, pose: stand };
+    }
+    const k = win(t, t1, tR - 0.45);
+    const x = lerp(SPIN_MARK.x, RUN_TAKEOFF, 0.55 * k + 0.45 * k * k);
+    // The fast bowler's run-up time at this x (it eases off his mark: s = 0.25u + 0.75u²).
+    const sp = (MARK.x - x) / (MARK.x - RUN_TAKEOFF);
+    const uu = (-0.25 + Math.sqrt(0.0625 + 3 * sp)) / 1.5;
+    const run = bowlerAt(SCRIPT_REL - 2.45 + 2.0 * uu).pose;
+    return { x, z: lerp(SPIN_MARK.z, 0.52, k), yaw: BOWL_YAW_RUN, pose: mixPose(STAND, run, smooth(Math.min(1, k * 4))) };
+  }
+
   // ---------------------------------------------------------------- a delivery
   function startBall(T0) {
     const m = ctl.m;
@@ -311,11 +349,24 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     const dz0 = ctl.bowlDz ?? 0;
     ctl.bowlDz = dz;
     cur.dz = dz;
+    // A spinner walks in off a short run (from wherever he is); a seamer coming
+    // on after one is eased back to the long run's mark as he sets off.
+    const st0 = stateOf('bowler', T0 - 1e-4) ?? { x: MARK.x, z: MARK.z };
+    const from = [st0.x, st0.z - dz0];
+    const dx0 = spec0.spin ? 0 : st0.x - MARK.x;
     plans.bowler.add(T0, tR + 1.3, (t) => {
-      const s = bowlerAt(SCRIPT_REL + (t - tR));
-      return { ...s, z: s.z + lerp(dz0, dz, smooth(win(t, T0, T0 + READY + 0.5))) };
+      const s = spec0.spin ? spinnerAt(t, tR, T0, from) : bowlerAt(SCRIPT_REL + (t - tR));
+      const k = smooth(win(t, T0, T0 + READY + 0.5));
+      return { ...s, x: s.x + (Math.abs(dx0) > 0.3 ? dx0 * (1 - k) : 0), z: s.z + lerp(dz0, dz, k) };
     });
     rest('bowler', tR + 1.3, { x: FT_END[0], z: FT_END[1] + dz, yaw: FT_YAW });
+    // Pace or spin: the keeper goes back or comes up to the stumps before the run-up
+    // (at the change of over he already has; this is for a forced ball in the nets or QA).
+    const want = spec0.spin ? KEEP_UP : KEEP_BACK;
+    if (want !== KEEP) {
+      KEEP = want;
+      if (dist2(homeXZ('keeper'), KEEP) > 0.3) walkTo('keeper', Math.max(T0, ctl.t), KEEP, { yaw: YAW_FIELD, speed: 4.2, min: 1.2 });
+    }
     const uz = dz ? UMP_ROUND_Z : UMP_BASE[1];
     if (Math.abs(homes.umpire.z - uz) > 0.05) walkTo('umpire', T0, [UMP_BASE[0], uz], { yaw: -PI / 2, speed: 1.4, min: 1.2 });
     ballPlan.add(tR, tR + 3, (t) => ({ pos: del.pos(t - tR), flying: true }), 'delivery');
@@ -353,13 +404,14 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     const hs = (k) => hash(ctl.seed * 13.7 + m.log.length * 3.1 + k);
     const aimLen = spec.aimLenM ?? spec.lenM;
     const aimLine = spec.aimLineZ ?? spec.lineZ;
-    const fake = hs(3) < pv.disguise && DISGUISE[spec.type];
+    // (The wrong'uns are a spinner's whole art: hidden more often.)
+    const fake = hs(3) < pv.disguise + (spec.type === 'googly' || spec.type === 'carrom' ? 0.25 : 0) && DISGUISE[spec.type];
     cur.preview = {
       x: STUMPS_X + aimLen + (hs(1) - 0.5) * 2 * pv.len * 0.6,
       z: aimLine - spec.seam + (hs(2) - 0.5) * 2 * pv.line * 0.6,
       rx: Math.max(0.3, pv.len),
       rz: Math.max(0.12, pv.line * 1.8),
-      typeName: fake ? TYPES[fake].name : spec.typeName,
+      typeName: `${spec.spin ? `${STYLE_NAMES[spec.style]} · ` : ''}${fake ? TYPES[fake].name : spec.typeName}`,
       length: spec.aimed ?? spec.length,
       line: spec.aimedLine ?? lineOf(aimLine),
       t0: T0 + 0.25,
@@ -474,7 +526,11 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       plans.bowler.add(tB0, tB0 + 1.8, (t) => stand(t, poseAt(t, [[tB0, STAND], [tB0 + 0.3, HANDS_ON_HEAD], [tB0 + 1.4, HANDS_ON_HEAD], [tB0 + 1.8, STAND]])));
       tReact = tB0 + 1.8;
     }
-    const tMark = walkTo('bowler', tReact, [MARK.x, MARK.z + (cur.dz ?? 0)], { yaw: BOWL_YAW_RUN, speed: 4.8, min: 2.4, easeK: 0.5 });
+    // Back to the mark for the next ball: the spinner's or the seamer's (whoever bowls the next over).
+    const after = m.balls + (o.legal ? 1 : 0);
+    const nextSpin = ctl.nets || after % 6 !== 0 || !m.attack ? !!cur.spec.spin : (m.attack[m.bowlerOf(after / 6)] ?? 'pace') !== 'pace';
+    const mark = nextSpin ? SPIN_MARK : MARK;
+    const tMark = walkTo('bowler', tReact, [mark.x, mark.z + (cur.dz ?? 0)], { yaw: BOWL_YAW_RUN, speed: 4.8, min: 2.4, easeK: 0.5 });
 
     const ctx = { r, tCall, tReveal, tMark, s, tNow };
     if (aiReview) {
@@ -595,6 +651,12 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       const tf = Math.max(tCall + 2.0, nextT0 - 2.0, late ? tNow + 1.0 : 0);
       at(tf, (t) => {
         setField(m.field, t, true);
+        // The keeper goes up to the stumps for a spinner's over, back for a seamer's, with the field.
+        const keep = m.style && m.style !== 'pace' ? KEEP_UP : KEEP_BACK;
+        if (keep !== KEEP) {
+          KEEP = keep;
+          walkTo('keeper', t, KEEP, { yaw: YAW_FIELD, speed: 2.4, min: 1.5 });
+        }
         hud.over(m, plan, t);
       });
       nextT0 = Math.max(nextT0, tf + 4.2);
@@ -735,13 +797,16 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     };
 
     if (fld.type === 'boundary' && fld.six) {
-      // Six: gone over the boards. The nearest fielder trots to the rope and watches.
+      // Six: gone over the boards and into the crowd, who are up for it where
+      // it lands. The nearest fielder trots to the rope and watches.
       ballPlan.add(tc, tStop, batted, 'batted');
       const lookAt = xz(last);
       const near = fieldSpotToward(by, lookAt);
       watch(by, near, lookAt, tc + 0.35, tc + Math.min(2.4, Math.max(1.3, sim.tStop)));
       runBatters(0, tc, cur);
-      return { tDead: tStop + 0.4, holder: 'gone', side: 'L' };
+      if (sim.tLand != null) ctl.onCrowd?.(sampleAt(sim, sim.tLand), tc + sim.tLand);
+      // (The next ball does not wait for it to stop rolling down the steps.)
+      return { tDead: tc + Math.min(sim.tStop, (sim.tRope ?? 1) + 3.2) + 0.4, holder: 'gone', side: 'L' };
     }
 
     ballPlan.add(tc, tI, batted, 'batted');
@@ -1222,12 +1287,20 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     const b = ballAt(t);
     fx.ball.visible = !b.hidden;
     fx.ballShadow.visible = !b.hidden;
+    // The ball is drawn at ctl.ballSize (radius, m); the physics keeps BALL_R.
+    // Near the ground it is lowered by the difference so it still sits on the grass.
+    const br = ctl.ballSize ?? BALL_R;
+    const bk = br / BALL_R;
+    const sink = (y) => (BALL_R - br) * clamp(1 - (y - BALL_R) / 0.3, 0, 1);
     if (!b.hidden) {
+      const gy = Math.abs(b.pos.x) > 24 || Math.abs(b.pos.z) > 20 ? standHeight(b.pos.x, b.pos.z) : 0;
       fx.ball.position.copy(b.pos);
+      fx.ball.position.y -= sink(b.pos.y - gy);
+      fx.ball.scale.setScalar(bk);
       fx.ball.rotation.set(t * 31, t * 7, 0);
-      const hgt = Math.max(0, b.pos.y - BALL_R);
-      fx.ballShadow.position.set(b.pos.x, 0.02, b.pos.z);
-      const ss = 1 / (1 + hgt * 0.9);
+      const hgt = Math.max(0, b.pos.y - gy - BALL_R);
+      fx.ballShadow.position.set(b.pos.x, gy + 0.02, b.pos.z);
+      const ss = bk / (1 + hgt * 0.9);
       fx.ballShadow.scale.set(ss, ss, 1);
       fx.ballShadow.material.opacity = 0.55 * ss;
     }
@@ -1237,7 +1310,11 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       const s = ballPlan.seg(tt);
       const ok = opts.trail !== false && b.flying && segNow?.tag && s && s.tag === segNow.tag;
       fx.trail[i].visible = !!ok;
-      if (ok) fx.trail[i].position.copy(s.fn(tt).pos);
+      if (ok) {
+        const q = s.fn(tt).pos;
+        fx.trail[i].position.set(q.x, q.y - sink(q.y), q.z);
+        fx.trail[i].scale.setScalar(bk);
+      }
     }
 
     // The read: in with a pop, out with a shrink (no fades).

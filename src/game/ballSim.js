@@ -1,12 +1,14 @@
-import { G, OVAL, ellipseK } from './rules.js';
+import { G, OVAL, ellipseK, standHeight } from './rules.js';
 import { BALL_R } from '../config.js';
 
 /**
  * The ball after it leaves the bat: gravity, bounces on the outfield and a
  * rolling drag, integrated at 240 Hz and stored as samples every 1/120 s so the
- * renderer and the fielders read the same path. Stops at the boards.
+ * renderer and the fielders read the same path. Stops at the boards; a six
+ * flies on over them and lands in the stands (bouncing down the terraces),
+ * which only the picture uses: the runs and the fielding are settled by then.
  *
- * Returns { samples: [{ t, x, y, z, air, speed }], six, four, tRope, tStop }.
+ * Returns { samples: [{ t, x, y, z, air, speed, crowd? }], six, four, tRope, tStop, tLand }.
  * `air` stays true until the first bounce.
  *
  * env (the match conditions): wind { x, z } m/s, which the drag works against
@@ -80,13 +82,46 @@ export function simulateBatted(p0, { az, speed, elev }, { wind = { x: 0, z: 0 },
         if (rolling || y <= BALL_R + 0.01) stopped = true;
       } else over = true;
     }
-    // Over the boards: it lands beyond them, or goes off the slab into the crowd.
-    if (over && (ellipseK(x, z, OVAL.slab) >= 0.97 || y <= BALL_R + 0.001)) {
-      samples.push({ t, x, y, z, air, speed: Math.hypot(vx, vz), gone: true });
-      return { samples, six, four, tRope, tStop: t, gone: true };
-    }
+    // Over the boards: on into the crowd, a bounce or two down the steps.
+    if (over) return intoCrowd(samples, { t, x, y, z, vx, vy, vz }, h, tRope ?? t, six, four);
   }
   return { samples, six, four, tRope, tStop: t, gone: false };
+}
+
+/** A carried six from the moment it clears the boards until it comes to rest in the stands (at most 4.5 s after the rope). */
+function intoCrowd(samples, b, h, tRope, six, four) {
+  let { t, x, y, z, vx, vy, vz } = b;
+  let tLand = null;
+  let bounces = 0;
+  // (Samples stay on the 1/120 s grid sampleAt indexes.)
+  while (t < tRope + 4.5) {
+    vy -= G * h;
+    const nx = x + vx * h, ny = y + vy * h, nz = z + vz * h;
+    const floor = standHeight(nx, nz) + BALL_R;
+    if (ny <= floor) {
+      // A riser in the way (it climbed more than a step's worth): it hits the face and drops back.
+      if (floor - Math.max(y, standHeight(x, z) + BALL_R) > 0.2) {
+        vx *= -0.25; vz *= -0.25;
+      } else {
+        x = nx; z = nz;
+        y = floor;
+        tLand ??= t;
+        bounces++;
+        vy = Math.abs(vy) * 0.3;
+        vx *= 0.55; vz *= 0.55;
+        if (vy < 0.6 || bounces > 3) {
+          samples.push({ t, x, y, z, air: false, speed: 0, crowd: true, gone: true });
+          return { samples, six, four, tRope, tStop: t, tLand, gone: true };
+        }
+      }
+    } else {
+      x = nx; y = ny; z = nz;
+    }
+    t += h;
+    if (Math.round(t / h) % 2 === 0) samples.push({ t, x, y, z, air: tLand == null, speed: Math.hypot(vx, vz), crowd: true });
+  }
+  samples.push({ t, x, y, z, air: false, speed: 0, crowd: true, gone: true });
+  return { samples, six, four, tRope, tStop: t, tLand: tLand ?? t, gone: true };
 }
 
 /** Sample at time t (linear between stored samples). */

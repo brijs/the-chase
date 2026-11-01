@@ -11,6 +11,13 @@ A pixel diorama of one over in a Test match, built with the Diorama playbook
 A speed-gun scoreboard flips after each ball (`142 BEATEN`, `151 BOUNCER`,
 `147 OUT c SLIP`).
 
+## Play it online
+
+**[The Chase on GitHub Pages](https://brijs.github.io/the-chase/)** opens
+straight into the game; the diorama is at
+[diorama.html](https://brijs.github.io/the-chase/diorama.html). Every push to
+`main` rebuilds and publishes it (see *Publishing* below).
+
 ## Open it
 
 - `short-ball.html`: standalone, 757 kB, works over `file://`.
@@ -52,6 +59,19 @@ its own miniature oval (rope about 30 m straight, 20 m square and 14 m fine), a
 full XI, a live scoreboard, a broadcast camera behind the bowler's arm and a
 DOM HUD. The diorama loop is unchanged; `qa/frame-hash.mjs` proves its frames
 are byte-identical.
+
+It fills the window, and the oval sits in a world of its own
+(`src/scene/stadium.js`): grass banks and five tiers of terracing with a
+sprinkling of spectators, a pavilion behind the gate, four floodlight towers, a
+ring of trees, green hills and snow-capped mountains under a sky that greys
+over on an overcast day. Nothing is clipped, and nothing beyond the stands
+casts a shadow. The surface of the bowl is one profile (`STANDS` and
+`standHeight` in `rules.js`), which the meshes and the ball both use.
+
+It opens on a **title screen**: the camera drifts round the ground behind the
+name, the keys and **Play** (Enter, Space, a click or the pad's A). N goes
+straight to the nets. `?title=0` skips it; so does automation, unless
+`?title=1`.
 
 | Keys | Shot | Best against |
 | --- | --- | --- |
@@ -173,6 +193,43 @@ plans; in all, about one ball in five. The read says *ROUND THE WICKET*.
     batter*).
   - Timing doesn't change: the pace and the length are what time the shot.
 - **In the nets** the picker can force either side.
+
+### Spin
+
+Each side's attack is three seamers, an off-spinner and a leg-spinner, all
+right-arm. In five overs it is two seamers and one spinner, off or leg by the
+seed. The seamers take the new ball and the death; the spinners bowl the
+middle overs (`bowlingOrder` in `scorebook.js`, still within the caps and
+never two overs running). The scorecard marks the spinners OB and LB.
+
+| Off-spin | | Leg-spin | |
+| --- | --- | --- | --- |
+| Off-break | 82–92 km/h, turns into the right-hander | Leg-break | 78–90, turns away |
+| Arm ball | drifts away, skids on, no turn | Googly | turns in, looks like a leg-break |
+| Carrom ball | turns away, looks like an off-break | Top-spinner | no turn, dips and bounces higher |
+| Quicker one | flat and quick, little turn | Flipper | skids on low and full |
+
+- **The ball** is solved like any delivery: swing is the drift, seam the turn
+  off the pitch, and `keep` how much pace it keeps (it grips, or skids). It is
+  in the air about 0.8 s to pitch, against 0.5 s for a seamer, so it loops.
+  A dry, dusty pitch turns it more (*spin* on the Conditions panel).
+- **The plans:** *Flight it and turn it* (slip and short leg),
+  *Darts at the stumps* (everyone saving one), and *Flat and quick, wide of
+  off* at the death. Off-spinners go round the wicket more often.
+- **The bowler** walks in off a short run, then bound, stride and release
+  are the same as the seamer's. The release time doesn't change, so neither
+  does the timing.
+- **The keeper** comes up to the stumps for a spinner's over, and the panel
+  says *KEEPER UP*.
+- **The read** names the style ("Leg-spin · Leg-break"). The wrong'uns are
+  disguised more often than other balls: the googly as a leg-break, the
+  carrom ball as an off-break.
+- **Batting:** only part of the turn plays as movement, because you see it
+  coming (*Spin: share of the turn*). A clean hit gets a little extra
+  (*Spin: extra speed*) for the pace there isn't. Both can be tuned with T. On
+  medium a good batter wins about 58% (61% with an all-pace attack): spin
+  goes for fewer boundaries and takes the odd catch in the deep.
+- **In the nets** the picker has all eight types.
 
 ### Conditions
 
@@ -339,7 +396,19 @@ One continuous camera, never a cut (`src/scene/gameCamera.js`):
 | Between balls | Wide: high behind the bowler's arm, the whole strip, with the bowler at his mark at the bottom of the frame. |
 | Run-up | Pushes in: the lens tightens and the aim slides up the pitch as he runs in, so the release finds it tight on the striker (off side left, straight down, matching the arrows). |
 | Off the bat | Cranes up, pans after the ball and opens the lens, leading the ball toward where it ends up. A ball coming back toward the camera (a straight drive) lifts it higher, so it looks down on the ball crossing the rope. |
+| A six | Follows it all the way into the crowd, plus a beat. Back over the bowler, it plays as a reverse angle: the camera stands off past where the ball will land and watches it come in. Elsewhere it pulls back and up over the boards and opens the lens. |
 | Ball dead | Glides back to the wide shot. |
+
+A six doesn't stop at the boards any more. It flies on and lands in the
+stands, bouncing down the steps, and the fans where it lands stand up and
+bounce. The runs and the fielding are settled at the rope as before, so
+outcomes are unchanged, and the next ball waits no more than about 1.5 s for
+it.
+
+**Ball size.** The ball is drawn at two-thirds of its old size (radius 6 cm;
+the real one is 3.6). The *Display* slider on O (Conditions) sets it, from
+4 to 9 cm, and it is remembered. The physics never changes; `?ball=0.09`
+sets the size for one visit.
 
 Every move is damped toward its framing, so the camera's path is continuous.
 **C** still switches to the 45° diorama view of the whole oval.
@@ -544,13 +613,17 @@ and with no calibration the outcome model is byte-for-byte unchanged.
 | `node qa/game-drs.mjs` | With an umpire who errs whenever he can: an LBW pitching outside leg is overturned (review kept), a plumb one stands (review lost, wicket falls), a caught-behind off nothing is overturned on UltraEdge, an offer left to run out walks the batter, the replay's Review analyses the last ball without changing anything, and the fielding side reviews a plumb LBW given not out and has it overturned. Screenshots of every stage in `qa/game/drs/`. |
 | `UMP=0.25 node qa/game-sim.mjs` | Balance with an erring umpire and no reviews (also `COND='{"sky":"humid"}'`). |
 | `node qa/crowd-preview.mjs` | Records the crowd from the game's own mix to `qa/game/crowd-preview.wav`, with a spectrogram. |
+| `node qa/game-world.mjs` | The canvas fills the window with no paper round the ground; a lofted straight drive goes for six and comes to rest in the stands, in frame all the way; the ball-size slider; the title screen and Enter to the match card. Screenshots in `qa/game/world/`. |
+| `node qa/game-spin.mjs` | Spin: each type's pace and turn (off-break in, leg-break away, googly in, carrom away), the top-spinner bouncing above the flipper, the longer flight, disguise, the keeper up, and the order (pace opens, spin in the middle, caps kept). In the browser: the short run, the keeper at the stumps and the read; a leg-break and a googly in `qa/game/spin/`. |
+| `SPIN=0 FORMAT=10 node qa/game-sim.mjs` | Balance with an all-pace attack (identical to the numbers before spin was added), or over 10 or 20 overs. |
 | `node qa/frame-hash.mjs` | Diorama frames are unchanged. |
 
 Known simplifications:
 
 - The bowler bowls every over from the same end.
 - There are no run-outs or byes; the batters only run what is safe.
-- A six over the boards is lost, and the umpire tosses the bowler a new ball.
+- A six lands in the stands and stays there, and the umpire tosses the bowler a new ball.
+- No left-arm bowlers, no stumpings, and no charging down the track to the spinners.
 
 ## Build
 
@@ -558,6 +631,21 @@ Known simplifications:
 npm install
 node build.mjs            # add --minify for shipping
 ```
+
+The build also writes `site/`, the published site:
+- `index.html` opens on the game (`window.__CHASE_MODE = 'game'`);
+- `diorama.html` is the diorama;
+- both load `app.js`.
+
+## Publishing
+
+`.github/workflows/pages.yml` runs on every push to `main`: it does `npm ci`,
+then `node build.mjs --minify`, and deploys `site/` to GitHub Pages
+(Settings → Pages → Source: *GitHub Actions*). `site/` is a build output
+and isn't committed.
+
+`refs/cricket/` (the YouTube reference clips and frame grabs) is
+gitignored and was never pushed: see CREDITS.md.
 
 ## Layout
 

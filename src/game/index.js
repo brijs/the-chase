@@ -5,6 +5,7 @@ import { buildCast } from '../scene/cast.js';
 import { buildEffects } from '../scene/effects.js';
 import { buildScoreboard } from '../scene/scoreboard.js';
 import { buildGameGround } from '../scene/gameGround.js';
+import { buildStadium } from '../scene/stadium.js';
 import { createDirector } from '../scene/gameCamera.js';
 import { createController } from './controller.js';
 import { createHud } from './hud.js';
@@ -22,6 +23,7 @@ import { loadChoice, saveChoice, randomConditions, resolveConditions } from './c
 import { createConditionsPanel } from './conditionsPanel.js';
 import { createDrs } from './drs.js';
 import { createFlow } from './matchFlow.js';
+import { createTitle } from './title.js';
 import { simulateInnings } from './aiInnings.js';
 import { resultLine } from './scorecard.js';
 import { DIFFICULTY, OVAL, FORMATS, makeRng } from './rules.js';
@@ -43,7 +45,13 @@ import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './ba
  *   ?ump=0.5                  umpire error rate for this visit (QA)
  *   ?drs=1                    the bot gets review offers too (QA; it never takes them itself)
  *   ?overs=10                 match length (5, 10 or 20; else the last one chosen)
+ *   ?title=0                  straight to the match card (no title screen; also with bot / nets,
+ *                             and under automation unless ?title=1)
+ *   ?ball=0.09                drawn ball radius for this visit (else O's Display slider)
  */
+/** The drawn ball's radius (m); the physics keeps BALL_R (0.09). */
+const BALL_SIZE = { min: 0.04, max: 0.09, def: 0.06 };
+
 export function startGame({ renderer, post, scene, camera, canvas, params }) {
   // Calibrated values first: the browser's save, else a baked calibration.json.
   tuning.init();
@@ -56,13 +64,10 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const board = buildScoreboard(scene, mats, -27.2, 8.2, 'dynamic');
   board.group.rotation.y = 1.73;
 
-  const [sa, sb] = OVAL.slab;
-  const CLIP = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(OVAL.cx - sa) + 0.05),
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), OVAL.cx + sa + 0.05),
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), sb + 0.05),
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), sb + 0.05),
-  ];
+  // The world round the oval: stands, crowd, hills and sky, edge to edge (no clip box, no paper).
+  const stadium = buildStadium(scene, mats);
+  const CLIP = [];
+  document.body.classList.add('game');
 
   const director = createDirector(camera);
   const audio = createAudio();
@@ -92,6 +97,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     lights.hemi.intensity = baseLight.hemi * c.light.hemi;
     lights.sun.color.copy(baseLight.color).multiply(new THREE.Color(c.light.tint));
     mats.pitch.color.set(c.pitchColor);
+    stadium.setSky(sel.sky === 'overcast' || sel.sky === 'humid' ? 'grey' : 'clear');
   }
   const setChoice = (c) => {
     choice = c;
@@ -282,6 +288,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     setChoice,
     // Before a match, between matches, and any time in the nets.
     editable: () => ctl.phase === 'intro' || ctl.phase === 'result' || ctl.nets,
+    ball: { min: BALL_SIZE.min, max: BALL_SIZE.max, get: () => ctl.ballSize, set: (r) => setBallSize(r) },
   });
   const calib = createCalibration({
     ctl,
@@ -304,6 +311,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     else ctl.press(dir, lofted, toGame(ts), special);
   };
   const handleKey = (k) => {
+      if (title.isOpen) return void (k === 'mute' ? audio.toggleMute() : title.key(k));
       if (scorecard.isOpen) return void (['enter', 'pause', 'scorecard', 'skip'].includes(k) && scorecard.close());
       if (flow.open) return void (k === 'mute' ? audio.toggleMute() : flow.key(k));
       if (drs.busy) return void (k === 'mute' ? audio.toggleMute() : drs.key(k));
@@ -360,6 +368,24 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const drs = createDrs({ ctl, scene, camera, root: hudRoot, audio, aspect: () => curAspect, fx });
   // The bot never reviews; with ?drs=1 it still gets the offer (QA drives it).
   ctl.noReviews = bot && params.get('drs') !== '1';
+  // A six in the crowd: the fans where it lands are up on their feet.
+  ctl.onCrowd = (p, t) => stadium.cheer(p, t);
+  // The drawn ball's radius: O's Display slider, remembered here; ?ball= for one visit.
+  const setBallSize = (r, save = true) => {
+    ctl.ballSize = Math.min(BALL_SIZE.max, Math.max(BALL_SIZE.min, +r || BALL_SIZE.def));
+    if (save) {
+      try {
+        localStorage.setItem('chase-ball-size', String(ctl.ballSize));
+      } catch {}
+    }
+  };
+  {
+    let saved = null;
+    try {
+      saved = localStorage.getItem('chase-ball-size');
+    } catch {}
+    setBallSize(params.get('ball') ?? saved ?? BALL_SIZE.def, false);
+  }
   const book = () => scorecard.book;
 
   /** The computer bats: best-fitting shot, near-perfect timing, leaves the wide ones. */
@@ -407,8 +433,10 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       const peak = S.reduce((m, q) => Math.max(m, q.y), 0);
       const f = o.fielding;
       // Follow until the ball is stopped or caught (and a beat after), at most 5 s.
-      const dur = f.type === 'boundary' ? Math.min(o.sim.tStop, 4) + 1.0 : f.t + 1.5;
-      path = { to, far: travel > 10 || peak > 3, end: c.tContact + Math.min(5, Math.max(2.0, dur)) };
+      // A six: all the way into the crowd, and a beat to enjoy it.
+      const six = f.type === 'boundary' && o.sim.six && o.sim.tLand != null;
+      const dur = six ? o.sim.tLand + 1.3 : f.type === 'boundary' ? Math.min(o.sim.tStop, 4) + 1.0 : f.t + 1.5;
+      path = { to, far: travel > 10 || peak > 3, six, peak, end: c.tContact + Math.min(six ? 6.5 : 5, Math.max(2.0, dur)) };
     }
     return { t: ctl.t, T0: c.T0, tR: c.tR, tC: c.tContact ?? null, ball: fx.ball.visible ? fx.ball.position : null, path };
   }
@@ -420,6 +448,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       drs.apply();
       timeUniform.value = drs.tView;
       ctl.render(drs.tView, { trail: false });
+      stadium.update(drs.tView);
       drs.afterRender();
       post.render(scene, camera, CLIP);
       hud.update(ctl.t, ctl);
@@ -430,12 +459,14 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       replay.applyCamera();
       timeUniform.value = replay.state.t;
       ctl.render(replay.state.t, { trail: replay.rate() >= 0.99 });
+      stadium.update(replay.state.t);
       post.render(scene, camera, CLIP);
       hud.update(ctl.t, ctl);
       return;
     }
     timeUniform.value = ctl.t;
     ctl.render(ctl.t);
+    stadium.update(ctl.t);
     director.update(dt, cameraCtx());
     post.render(scene, camera, CLIP);
     hud.update(ctl.t, ctl);
@@ -447,11 +478,30 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   ctl.preview(difficulty, seed, format);
   hud.guide = DIFFICULTY[difficulty].guide;
+  // The title screen first (the camera drifting round the ground), then the match card.
+  const title = createTitle({
+    root: hudRoot,
+    dioramaUrl: window.__DIORAMA_URL ?? '?mode=diorama',
+    onPlay: () => {
+      director.set('broadcast', { glide: true });
+      setTimeout(showIntro, 650);
+    },
+    onNets: () => {
+      director.set('broadcast', { glide: true });
+      startNets();
+    },
+    onController: () => padPanel.toggle(),
+  });
+  director.set('broadcast');
   if (bot) start();
   else if (params.get('nets') === '1') startNets();
-  else showIntro();
+  // (Automation skips it unless ?title=1, so the QA scripts land on the match card as before.)
+  else if (params.get('title') === '0' || (navigator.webdriver && params.get('title') !== '1')) showIntro();
+  else {
+    title.show();
+    director.set('orbit');
+  }
   applyLook(choice.sel);
-  director.set('broadcast');
   frame(0);
 
   let last = null;
@@ -480,6 +530,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     hud,
     audio,
     tuning,
+    SCALES,
     calib,
     panel,
     pad,
@@ -488,6 +539,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     scorecard,
     drs,
     flow,
+    title,
     toss,
     begin,
     superOverNext,

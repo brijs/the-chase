@@ -53,6 +53,8 @@ const css = `
   @media (max-width: 620px) {
     #frame { width: 94vw; height: 94vh; }
   }
+  /* The game fills the window (the diorama keeps its framed slab on paper). */
+  body.game #frame { left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; transform: none; }
   #stage {
     display: block;
     width: 100%;
@@ -77,7 +79,7 @@ const css = `
   #fallback[hidden] { display: none; }
 `;
 
-function page(scriptTag) {
+function page(scriptTag, { title = 'The Short Ball — a cricket diorama', label = 'A real-time rendered miniature cricket diorama: a fast bowler, a bouncer and a slip catch', head = '' } = {}) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -85,11 +87,11 @@ function page(scriptTag) {
 <link rel="icon" href="data:," />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#ffffff" />
-<title>The Short Ball — a cricket diorama</title>
+<title>${title}</title>${head}
 <style>${css}</style>
 </head>
 <body>
-<div id="frame"><canvas id="stage" aria-label="A real-time rendered miniature cricket diorama: a fast bowler, a bouncer and a slip catch" tabindex="-1"></canvas></div>
+<div id="frame"><canvas id="stage" aria-label="${label}" tabindex="-1"></canvas></div>
 <div id="fallback" hidden>This diorama needs a browser with WebGL2 enabled.</div>
 ${scriptTag}
 </body>
@@ -100,4 +102,13 @@ ${scriptTag}
 await writeFile('index.html', page('<script src="./dist/app.js"></script>'));
 await writeFile('short-ball.html', page(`<script>${safeJs}</script>`));
 
-console.log(`built dist/app.js (${(js.length / 1024).toFixed(0)} kB), index.html, short-ball.html`);
+// The published site (GitHub Pages): the game at the root, the diorama beside it.
+// Both share one script file; the page says which to open.
+await mkdir('site', { recursive: true });
+await writeFile('site/app.js', js);
+const game = { title: 'The Chase — a pixel cricket game', label: 'The Chase: a pixel cricket game. You bat; the AI bowls pace and spin.', head: '\n<meta name="description" content="A pixel cricket game in the browser: you bat, the AI bowls pace and spin, sets the field and learns where you score." />' };
+await writeFile('site/index.html', page(`<script>window.__CHASE_MODE = 'game'; window.__DIORAMA_URL = 'diorama.html';</script>\n<script src="./app.js"></script>`, game));
+await writeFile('site/diorama.html', page(`<script>window.__CHASE_MODE = 'diorama';</script>\n<script src="./app.js"></script>`));
+await writeFile('site/.nojekyll', '');
+
+console.log(`built dist/app.js (${(js.length / 1024).toFixed(0)} kB), index.html, short-ball.html, site/`);
