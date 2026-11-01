@@ -66,6 +66,21 @@ function lin(t0, p, v, a = { x: 0, y: -G, z: 0 }) {
 }
 
 /**
+ * Where a ball pitches across the pitch (z) for a length, a line at the
+ * stumps, its swing and seam, from the hand at rel. It carries on from the
+ * bounce in the direction it arrived (the swing kept), and the seam moves it
+ * on to the line, so the pitch point sits on the line from the hand to the
+ * aim (the line less the seam), less the part of the swing still to come:
+ * over the wicket it angles in, round the wicket across. The read's marker
+ * uses it too, so it shows where the aimed ball lands.
+ */
+export function pitchZ(lenM, lineZ, swing, seam, rel = RELEASE_PT) {
+  const L = lenM;
+  const D = rel.x - STUMPS_X;
+  return ((lineZ - seam) * (D - L) + rel.z * L - swing * L) / D;
+}
+
+/**
  * spec: { type, kph, length, lenM, line, lineZ, hStumps, swing, seam, keep? }
  * paceK scales real speed (the diorama runs ~15% slow so the ball reads).
  * Returns a delivery with pos(t) for t >= 0 seconds after release.
@@ -74,12 +89,7 @@ export function buildDelivery(spec, paceK = 0.8, rel = RELEASE_PT) {
   const v = (spec.kph / 3.6) * paceK;
   const xb = STUMPS_X + spec.lenM;
   const zs = spec.lineZ;
-  // Where it pitches: on the straight line from the hand to where it is aimed
-  // (the line at the stumps less the seam), so the angle from the bowler's side
-  // of the stumps carries through the bounce: over the wicket it angles in,
-  // round the wicket across. Then the seam moves it on to the line.
-  const aimZ = zs - spec.seam;
-  const zb = aimZ - (aimZ - rel.z) * (xb - STUMPS_X) / (rel.x - STUMPS_X);
+  const zb = pitchZ(spec.lenM, zs, spec.swing, spec.seam, rel);
   const bounce = { x: xb, y: BALL_R, z: zb };
 
   // Pre-bounce: horizontal speed ~ v, lateral swing as a constant acceleration

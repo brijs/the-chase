@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs';
  *   - a forced round-the-wicket ball: the bowler's hand is at the release point
  *     the delivery is solved from, the umpire has stepped across, nobody walks
  *     through anybody (closest approaches of bowler to umpire / non-striker /
- *     stumps), the read says ROUND THE WICKET
+ *     stumps), the read says ROUND THE WICKET and its marker is where it pitches
  *   - back over the wicket next ball: the bowler sidesteps at his mark, no jumps
  *   - the circle is drawn; the over panel shows the powerplay and who is out
  * Screenshots in qa/game/round/.
@@ -26,7 +26,7 @@ await page.waitForFunction(() => window.__dioramaReady === true);
 const r = await page.evaluate(() => {
   const g = window.__game;
   g.start();
-  g.ctl.forceNext = { side: 'round', type: 'straight', lenM: 5.5, lineZ: 0.05, hStumps: 0.5, kph: 136, swing: 0, seam: 0 };
+  g.ctl.forceNext = { side: 'round', type: 'inswinger', lenM: 5.5, lineZ: 0.05, aimLenM: 5.5, aimLineZ: 0.05, hStumps: 0.5, kph: 136, swing: -0.2, seam: 0 };
   g.until((c) => c.cur && c.cur.dz != null, 20, 1 / 30);
   const c = g.ctl.cur;
   // Closest approaches during the run-up and follow-through.
@@ -54,10 +54,11 @@ const r = await page.evaluate(() => {
   g.until((c2) => c2.t > c.tR - 0.9, 20, 1 / 30);
   const read = document.querySelector('#hud-next').innerText;
   const plan = document.querySelector('#hud-plan').innerText;
-  return { nsZ: nsAt.z, nsStep, nsStumps, dz: c.dz, side: c.spec.side, angle: c.del.angle, dU, dN, dS, maxStep, handGap: Math.hypot(hand.x - rel.x, hand.y - rel.y, hand.z - rel.z), ump: g.ctl.stateOf('umpire', c.tR), read, plan };
+  return { mark: c.preview.z - c.del.bounce.z, markR: c.preview.rz, nsZ: nsAt.z, nsStep, nsStumps, dz: c.dz, side: c.spec.side, angle: c.del.angle, dU, dN, dS, maxStep, handGap: Math.hypot(hand.x - rel.x, hand.y - rel.y, hand.z - rel.z), ump: g.ctl.stateOf('umpire', c.tR), read, plan };
 });
 await page.screenshot({ path: 'qa/game/round/runup.png' });
 check(r.side === 'round' && r.angle > 0.5, `round the wicket: angle across ${r.angle.toFixed(2)} m`);
+check(Math.abs(r.mark) < r.markR * 0.6, `the read's marker is on the bounce (${(r.mark * 100).toFixed(0)} cm across, zone ±${(r.markR * 100).toFixed(0)} cm)`);
 check(/ROUND THE WICKET/.test(r.read), `the read says so: "${r.read.replace(/\n/g, ' ')}"`);
 check(r.handGap < 0.35, `the ball leaves the hand (hand to release point ${r.handGap.toFixed(2)} m)`);
 check(r.ump.z > 0.3, `the umpire has stepped across (z ${r.ump.z.toFixed(2)})`);

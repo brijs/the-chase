@@ -17,10 +17,10 @@ import { Plan } from './plan.js';
 import { createMatch, describeDelivery } from './match.js';
 import { SHOTS, shotFor } from './batting.js';
 import { simulateBatted, sampleAt } from './ballSim.js';
-import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, KEEPER_STANDING_UP, GATE_PT, GATE_OUT, ROUND_DZ, standHeight } from './rules.js';
+import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, KEEPER_STANDING_UP, GATE_PT, GATE_OUT, ROUND_DZ, RELEASE_PT, RELEASE_ROUND, standHeight } from './rules.js';
 import { fieldPositions, FK } from './fielding.js';
 import { TYPES, DISGUISE, STYLE_NAMES } from './bowlerAI.js';
-import { lineOf } from './delivery.js';
+import { lineOf, pitchZ } from './delivery.js';
 import { STUMPS_X } from './rules.js';
 import { SCALES } from './tuning.js';
 import { aiFieldersReview } from './umpire.js';
@@ -408,7 +408,8 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     const fake = hs(3) < pv.disguise + (spec.type === 'googly' || spec.type === 'carrom' ? 0.25 : 0) && DISGUISE[spec.type];
     cur.preview = {
       x: STUMPS_X + aimLen + (hs(1) - 0.5) * 2 * pv.len * 0.6,
-      z: aimLine - spec.seam + (hs(2) - 0.5) * 2 * pv.line * 0.6,
+      // Where the aimed ball pitches, from his side of the stumps (round the wicket it lands well to leg of the line).
+      z: pitchZ(aimLen, aimLine, spec.swing, spec.seam, spec.side === 'round' ? RELEASE_ROUND : RELEASE_PT) + (hs(2) - 0.5) * 2 * pv.line * 0.6,
       rx: Math.max(0.3, pv.len),
       rz: Math.max(0.12, pv.line * 1.8),
       typeName: `${spec.spin ? `${STYLE_NAMES[spec.style]} · ` : ''}${fake ? TYPES[fake].name : spec.typeName}`,

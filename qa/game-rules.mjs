@@ -1,6 +1,6 @@
 import { createMatch } from '../src/game/match.js';
 import { SHOTS, shotFoot, shotFor, findGap, K } from '../src/game/batting.js';
-import { buildDelivery } from '../src/game/delivery.js';
+import { buildDelivery, pitchZ } from '../src/game/delivery.js';
 import { TYPES } from '../src/game/bowlerAI.js';
 import { readFileSync } from 'node:fs';
 import { tuning } from '../src/game/tuning.js';
@@ -183,6 +183,18 @@ const both = (spec) => [RELEASE_PT, RELEASE_ROUND].map((rel) => buildDelivery({ 
   const [, r3] = both({ lineZ: 0.12, lenM: 3.2, length: 'full', hStumps: 0.3 });
   cases.push([`round, full at off stump: angled across ${r3.angle.toFixed(2)} m, still pitching ${trackLbw(r3, 'front', true)?.pitching ?? 'clear of the pad'}`, () => 0, () => r3.angle > 0.8]);
   const share = (() => { let n = 0, k = 0; for (let sd = 1; sd <= 60; sd++) { const m = createMatch({ seed: sd }); m.startOver(); for (let b = 0; b < 6; b++) { n++; if (m.nextDelivery().spec.side === 'round') k++; } } return k / n; })();
+  // Swing is kept through the bounce: the line turns there only by the seam, the
+  // way the seam moves it (an inswinger never jinks away off the pitch), and the
+  // read's marker (pitchZ) is where the ball lands, from either side.
+  const kinks = [];
+  for (const [swing, seam] of [[-0.25, -0.02], [0.25, 0.02], [-0.25, 0], [0, -0.15], [0.05, -0.4]])
+    for (const [i, d] of both({ lineZ: 0.15, swing, seam }).entries()) {
+      const e = 0.01, a = d.pos(d.T1 - e), b = d.pos(d.T1), c = d.pos(d.T1 + e);
+      const kink = (c.z - b.z) / (b.x - c.x) - (b.z - a.z) / (a.x - b.x);
+      const mark = pitchZ(d.spec.lenM, d.spec.lineZ, swing, seam, i ? RELEASE_ROUND : RELEASE_PT);
+      kinks.push({ ok: Math.abs(kink - seam / d.spec.lenM) < 0.002 && Math.abs(mark - d.bounce.z) < 1e-9, kink });
+    }
+  cases.push([`swing kept through the bounce, the turn there only the seam's; the marker on the bounce (${kinks.filter((k) => k.ok).length}/${kinks.length})`, () => 0, () => kinks.every((k) => k.ok)]);
   cases.push([`the AI bowls round the wicket ${(share * 100).toFixed(0)}% of the time`, () => 0, () => share > 0.08 && share < 0.4]);
 }
 // Fielding restrictions.
