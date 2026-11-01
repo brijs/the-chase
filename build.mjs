@@ -89,6 +89,7 @@ function page(scriptTag, { title = 'The Short Ball — a cricket diorama', label
 <meta name="theme-color" content="#ffffff" />
 <title>${title}</title>${head}
 <style>${css}</style>
+<script defer src="https://brijs.dev/t.js" data-site="the-chase"></script>
 </head>
 <body>
 <div id="frame"><canvas id="stage" aria-label="${label}" tabindex="-1"></canvas></div>
