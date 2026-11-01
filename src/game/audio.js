@@ -434,6 +434,26 @@ export function createAudio() {
         voice(t + Math.random() * 0.3, dur * (0.7 + Math.random() * 0.3), [[0, f0 * 1.05], [dur * 0.5, f0], [dur, f0 * 0.82]], [[300, 6, 1], [700, 6, 0.25]], 0.02 + 0.035 * size, 0, stands);
       }
     },
+    // ---- the toss
+    coin(t) {
+      // Flicked off the thumb: a bright ring that wobbles as it spins.
+      noise(t, 0.03, { type: 'highpass', freq: 3000, peak: 0.3 });
+      for (const [f0, pk] of [[2350, 0.09], [3720, 0.05], [5100, 0.03]]) {
+        const o = tone(t, 1.2, { type: 'sine', f0, f1: f0 * 0.995, peak: pk, attack: 0.003 });
+        const lfo = ctx.createOscillator();
+        const lg = ctx.createGain();
+        lfo.frequency.value = 9;
+        lg.gain.value = f0 * 0.004;
+        lfo.connect(lg).connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + 1.3);
+      }
+    },
+    coinLand(t) {
+      tone(t, 0.08, { f0: 1800, f1: 1400, peak: 0.08, type: 'triangle' });
+      noise(t, 0.05, { type: 'lowpass', freq: 900, peak: 0.25 });
+      tone(t + 0.12, 0.05, { f0: 1700, f1: 1500, peak: 0.04, type: 'triangle' });
+    },
     // ---- the review
     tick(t, { hot = false } = {}) {
       tone(t, 0.05, { type: 'square', f0: hot ? 1320 : 880, f1: hot ? 1300 : 870, peak: hot ? 0.12 : 0.08 });

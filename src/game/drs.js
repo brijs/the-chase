@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BALL_REAL_R, STUMPS_X } from './rules.js';
 import { BALL_R, PITCH } from '../config.js';
-import { ZONE_HALF, ZONE_TOP, snickEvents } from './umpire.js';
+import { ZONE_HALF, ZONE_TOP, snickEvents, trackAny, lbwVerdict } from './umpire.js';
 
 /**
  * The Decision Review System, for the batter.
@@ -24,6 +24,11 @@ import { ZONE_HALF, ZONE_TOP, snickEvents } from './umpire.js';
  *
  * Sound throughout: the sting, a low pulse while it is checked, a bleep for
  * each reveal, a riser into the decision.
+ *
+ * The same views run from the replay (Review) on any ball as an analysis: not
+ * a challenge, nothing changes. A pad ball gets the full LBW track; a ball
+ * through to the keeper or into the stumps gets pitching and the stumps; a
+ * shot gets UltraEdge and where it was heading had it been missed.
  */
 const CSS = `
 #drs-offer, #drs-head, #drs-rows, #drs-step, #drs-big, #drs-snick { position: absolute; display: none; z-index: 7; color: #f6f2e6; font-family: ui-monospace, Menlo, monospace; }
@@ -61,6 +66,7 @@ const CSS = `
 #drs-big .d { display: inline-block; font-size: 54px; font-weight: bold; letter-spacing: 0.1em; padding: 8px 28px; border-radius: 6px; background: #c13a3c; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.25); }
 #drs-big .d.ok { background: #2f8f86; }
 #drs-big .why { margin-top: 10px; font-size: 15px; letter-spacing: 0.08em; background: #1c2847; display: inline-block; padding: 5px 14px; border-radius: 4px; }
+.drs-on #hud-call, .drs-on #hud-info, .drs-on #hud-cond, .drs-on #hud-plan, .drs-on #hud-top, .drs-on #hud-next { visibility: hidden; }
 @media (max-width: 620px) { #drs-rows { top: auto; bottom: 120px; right: 8px; min-width: 180px; } #drs-big .d { font-size: 36px; } }
 `;
 
@@ -223,32 +229,60 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     offer = null;
     show(offerEl, false);
     ctl.phase = 'drs';
-    seq = buildReview(o, cur);
+    begin(buildReview(o, cur, false), `<div class="t">DECISION REVIEW</div><div class="s">${o.umpire.kind === 'lbw' ? 'LBW' : 'CAUGHT'} · on-field decision <b style="color:#f3c94a">OUT</b> · batter's review</div>`);
+  };
+  /**
+   * The fielding side reviews a not-out (they have their own reviews). Same
+   * views; overturned means out.
+   */
+  api.aiReview = ({ o, cur, reviewsLeft }) => {
+    if (seq || offer) return;
+    const s = buildReview(o, cur, false);
+    s.by = 'ai';
+    begin(s, `<div class="t">DECISION REVIEW</div><div class="s">${o.umpire.kind === 'lbw' ? 'LBW' : 'CAUGHT'} · on-field decision <b style="color:#7fd4c8">NOT OUT</b> · the fielding side's review <span class="drs-dots">${dots(reviewsLeft)}</span></div>`);
+    audio.play('ooh', { size: 0.5 });
+  };
+  /** From the replay: the same views on any ball, as an analysis. onDone when it ends. */
+  api.analyse = (o, cur, onDone) => {
+    if (seq || offer || !o || !cur) return false;
+    const s = buildReview(o, cur, true);
+    s.onDone = onDone;
+    begin(s, `<div class="t">REPLAY REVIEW</div><div class="s">not a challenge: nothing changes · on the field: <b style="color:#f3c94a">${o.out ? `OUT (${o.out})` : o.call ?? 'not out'}</b></div>`);
+    return true;
+  };
+  function begin(s, head) {
+    seq = s;
     seq.i = -1;
     next();
     g.visible = true;
+    document.body.classList.add('drs-on'); // the game's own HUD steps aside
     show(headEl, true);
     show(rowsEl, true);
     show(stepEl, true);
-    headEl.innerHTML = `<div class="t">DECISION REVIEW</div><div class="s">${o.umpire.kind === 'lbw' ? 'LBW' : 'CAUGHT'} · on-field decision <b style="color:#f3c94a">OUT</b> · batter's review</div>`;
+    headEl.innerHTML = head;
     drawRows();
-    audio.play('drsSting');
+    audio.play('drsSting', { soft: s.analysis });
     pulseT = 0.6;
-  };
+  }
 
-  function buildReview(o, cur) {
+  function buildReview(o, cur, analysis) {
     const u = o.umpire;
     const del = cur.del;
     const tR = cur.tR;
-    const lbw = u.kind === 'lbw' ? u : null;
-    const offered = o.kind === 'miss';
+    // The track: an LBW's own, or (analysis) whatever this ball did.
+    const track = analysis ? trackAny(del, o) : u.kind === 'lbw' ? u.track : null;
+    const lbw = track ? { track, batFirst: !!u?.batFirst } : null;
+    const offered = analysis ? o.kind !== 'leave' : o.kind === 'miss';
+    const struck = o.kind === 'hit' || o.kind === 'playedOn';
     const ev = snickEvents(o, del);
-    // When the ball passes the bat: contact for an edge, the pad for an LBW, or the take for a phantom.
-    const tPass = o.kind === 'hit' ? o.shot.tContact : lbw ? lbw.track.tPad : del.contactTime(o.foot ?? 'front');
-    const s = { o, cur, del, tR, u, lbw, ev, tPass, rows: [], steps: [], t: 0, result: null };
+    // When the ball passes the bat: contact for a hit or an edge, the pad for an LBW, or the take for a phantom.
+    const tPass = struck ? o.shot.tContact : track?.impact ? track.tPad : del.contactTime(o.foot ?? 'front');
+    const s = { o, cur, del, tR, u, lbw, ev, tPass, analysis, rows: [], steps: [], t: 0, result: null };
     if (lbw) {
       if (offered) s.rows.push({ id: 'bat', name: 'BAT', v: null });
-      s.rows.push({ id: 'pitching', name: 'PITCHING', v: null }, { id: 'impact', name: 'IMPACT', v: null }, { id: 'wickets', name: 'WICKETS', v: null });
+      s.rows.push({ id: 'pitching', name: 'PITCHING', v: null });
+      if (track.impact) s.rows.push({ id: 'impact', name: 'IMPACT', v: null });
+      s.rows.push({ id: 'wickets', name: 'WICKETS', v: null });
     } else s.rows.push({ id: 'edge', name: 'EDGE', v: null });
 
     const setRow = (id, text, tone) => {
@@ -267,7 +301,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     const tEnd = tPass + 0.35;
     s.steps.push({
       title: 'REPLAY',
-      sub: 'third umpire checking',
+      sub: analysis ? 'the ball again' : 'third umpire checking',
       dur: Math.min(3.2, (tEnd + 0.3) / 0.5),
       view: (k) => ({ tView: tR - 0.3 + (tEnd + 0.3) * k, pos: [31, 6.5, 0.6], target: [-4.5, 0.4, 0.1], fov: 16.5 - 3 * ease(k) }),
     });
@@ -277,7 +311,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     const edgeFound = ev.some((e) => e.kind === 'bat');
     s.steps.push({
       title: 'ULTRAEDGE',
-      sub: lbw ? 'bat or pad first?' : 'any sound as it passes the bat?',
+      sub: struck ? 'the sound off the bat' : lbw ? 'bat or pad first?' : 'any sound as it passes the bat?',
       dur: 5.2,
       start: () => {
         wait(lbw ? 'bat' : 'edge');
@@ -291,7 +325,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
       },
       snick: true,
       skip: lbw && !offered,
-      reveal: [[0.86, () => (lbw ? setRow('bat', lbw.batFirst ? 'BAT FIRST' : 'NO BAT', lbw.batFirst ? 'ok' : 'out') : setRow('edge', edgeFound ? 'EDGE · SPIKE' : 'NO EDGE', edgeFound ? 'out' : 'ok'))]],
+      reveal: [[0.86, () => (lbw ? setRow('bat', struck ? 'BAT · SPIKE' : lbw.batFirst ? 'BAT FIRST' : 'NO BAT', struck ? 'uc' : lbw.batFirst ? 'ok' : 'out') : setRow('edge', edgeFound ? 'EDGE · SPIKE' : 'NO EDGE', edgeFound ? 'out' : 'ok'))]],
     });
 
     if (lbw) {
@@ -302,7 +336,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
       const W = new THREE.Vector3(STUMPS_X, tr.atStumps.y, tr.atStumps.z);
       s.onStart = () => {
         tube = buildTube(del.pos, 0, tr.tPad, RED, 1);
-        projTube = buildTube(del.pos, tr.tPad, tr.tStumps + 0.02, BLUE, 0.75);
+        if (tr.tStumps - tr.tPad > 0.02) projTube = buildTube(del.pos, tr.tPad, tr.tStumps + 0.02, BLUE, 0.75);
         bounceMark.position.set(B.x, 0.024, B.z);
         impactMark.position.copy(I);
         ghost.position.copy(W);
@@ -332,6 +366,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
         title: 'BALL TRACKING',
         sub: 'where did it hit the batter?',
         dur: 3.0,
+        skip: !tr.impact,
         start: () => wait('impact'),
         view: (k) => {
           const u2 = clamp01(k / 0.55);
@@ -348,7 +383,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
       // 5. The projection on to the stumps, from behind them.
       s.steps.push({
         title: 'BALL TRACKING',
-        sub: 'would it have hit the stumps?',
+        sub: tr.end === 'bat' ? 'had it got past the bat: the stumps?' : 'would it have hit the stumps?',
         dur: 4.0,
         start: () => {
           wait('wickets');
@@ -361,7 +396,9 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
         },
         vis: { zone: true, tube: true, proj: true, ball: true, wz: true, bounce: true, impact: true, ghost: (k) => k > 0.66 },
         reveal: [[0.7, () => {
-          const [txt, tone] = LABEL.wickets[tr.wickets];
+          const [lab, tone] = LABEL.wickets[tr.wickets];
+          // Without an appeal there is no umpire to call: just clipping.
+          const txt = analysis && !tr.impact && tr.wickets === 'umpiresCall' ? 'CLIPPING' : lab;
           tint(ghost, TONE[tone]);
           wzMat.color.setHex(TONE[tone]);
           setRow('wickets', txt, tone);
@@ -371,12 +408,13 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
 
     // 6. The decision: the whole picture, a riser, then the call.
     s.steps.push({
-      title: 'THIRD UMPIRE',
-      sub: 'decision',
-      dur: 5.2,
+      title: analysis ? 'BALL TRACKING' : 'THIRD UMPIRE',
+      sub: analysis ? 'summary' : 'decision',
+      final: true,
+      dur: analysis ? 4.2 : 5.2,
       start: () => {
         audio.play('drsRiser');
-        s.result = ctl.m.review(o);
+        if (!analysis) s.result = s.by === 'ai' ? ctl.m.aiReview(o) : ctl.m.review(o);
       },
       view: (k) => (lbw
         ? { tView: tR + lbw.track.tPad, pos: [lerp(-2, 0, k), lerp(4.2, 5.2, k), lerp(5.8, 7.2, k)], target: [-4.5, 0.2, 0], fov: 34, proj: 1, track: 1, ball: lbw.track.tStumps, hideBall: true }
@@ -389,7 +427,25 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
   }
 
   function decide(s) {
+    if (s.analysis) return summarise(s);
     const r = s.result;
+    if (s.by === 'ai') {
+      // Their review: overturned is out (the crowd, with the batter, hates it).
+      const out = r.overturned;
+      const why = out ? 'DECISION OVERTURNED' : r.umpiresCall ? "UMPIRE'S CALL · THEIR REVIEW RETAINED" : 'ORIGINAL DECISION STANDS · THEIR REVIEW LOST';
+      bigEl.innerHTML = `<div class="d ${out ? '' : 'ok'}">${out ? 'OUT' : 'NOT OUT'}</div><br><div class="why">${why}</div>`;
+      show(bigEl, true);
+      requestAnimationFrame(() => bigEl.classList.add('on'));
+      audio.play('drsVerdict', { good: !out });
+      if (out) {
+        audio.play('ooh', { size: 0.9 });
+        audio.play('boo', { size: 0.8 }, 0.3);
+      } else {
+        audio.play('cheer', { size: 0.9 });
+        audio.play('applause', { size: 0.5 }, 0.5);
+      }
+      return;
+    }
     const notOut = r.overturned;
     const why = notOut ? 'DECISION OVERTURNED' : r.umpiresCall ? "UMPIRE'S CALL · REVIEW RETAINED" : 'ORIGINAL DECISION STANDS · REVIEW LOST';
     bigEl.innerHTML = `<div class="d ${notOut ? 'ok' : ''}">${notOut ? 'NOT OUT' : 'OUT'}</div><br><div class="why">${why}</div>`;
@@ -407,6 +463,37 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
       audio.play('ooh', { size: 0.9 });
       audio.play('boo', { size: 0.55 }, 0.35);
     }
+  }
+
+  /** The analysis' last word: what tracking says, without changing anything. */
+  function summarise(s) {
+    const { o, lbw } = s;
+    const tr = lbw?.track;
+    let head;
+    let ok = false;
+    let why;
+    if (tr?.impact) {
+      const v = lbw.batFirst ? 'notOut' : lbwVerdict(tr);
+      head = v === 'out' ? 'OUT' : v === 'notOut' ? 'NOT OUT' : "UMPIRE'S CALL";
+      ok = v === 'notOut';
+      why = `LBW BY BALL TRACKING · ON THE FIELD: ${o.out ? 'OUT' : 'NOT OUT'}`;
+    } else if (o.kind === 'hit' || o.kind === 'playedOn') {
+      head = o.shot?.edge ? 'EDGED' : 'MIDDLED';
+      ok = !o.shot?.edge;
+      why = `${(o.call ?? '').toUpperCase()}${tr ? ` · HAD IT MISSED THE BAT: ${tr.wickets === 'umpiresCall' ? 'CLIPPING' : LABEL.wickets[tr.wickets][0]}` : ''}`;
+    } else if (tr) {
+      head = tr.wickets === 'umpiresCall' ? 'CLIPPING' : LABEL.wickets[tr.wickets][0];
+      ok = tr.wickets === 'missing';
+      why = o.out === 'bowled' ? 'BOWLED' : o.kind === 'leave' ? 'LEFT ALONE' : 'BEATEN';
+    } else {
+      head = o.out ? 'OUT' : 'NOT OUT';
+      ok = !o.out;
+      why = (o.call ?? '').toUpperCase();
+    }
+    bigEl.innerHTML = `<div class="d ${ok ? 'ok' : ''}" style="font-size:40px">${head}</div><br><div class="why">${why}</div>`;
+    show(bigEl, true);
+    requestAnimationFrame(() => bigEl.classList.add('on'));
+    audio.play('drsVerdict', { good: ok });
   }
 
   function drawRows() {
@@ -434,6 +521,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     bigEl.classList.remove('on');
     show(bigEl, false);
     g.visible = false;
+    document.body.classList.remove('drs-on');
     for (const m of [tube, projTube]) {
       if (!m) continue;
       g.remove(m);
@@ -445,7 +533,8 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     tint(impactMark, RED);
     tint(ghost, RED);
     wzMat.color.setHex(BLUE);
-    ctl.settleReview(s.result ?? ctl.m.review(s.o));
+    if (s.analysis) s.onDone?.();
+    else ctl.settleReview(s.result ?? (s.by === 'ai' ? ctl.m.aiReview(s.o) : ctl.m.review(s.o)));
   }
 
   // ---------------------------------------------------------------- per frame
@@ -458,7 +547,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     while (st.reveal && st.fired < st.reveal.length && k >= st.reveal[st.fired][0]) st.reveal[st.fired++][1]();
     // The low pulse while it is being checked (not once the decision is up).
     pulseT -= dt;
-    if (pulseT <= 0 && !(st.title === 'THIRD UMPIRE' && k > 0.26)) {
+    if (pulseT <= 0 && !(st.final && k > 0.26)) {
       audio.play('drsPulse');
       pulseT = 0.85;
     }
@@ -469,7 +558,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
   /** Space during a review: straight to the decision. */
   api.skip = () => {
     if (!seq) return;
-    while (seq && seq.steps[seq.i] && seq.steps[seq.i].title !== 'THIRD UMPIRE') {
+    while (seq && seq.steps[seq.i] && !seq.steps[seq.i].final) {
       const st = seq.steps[seq.i];
       while (st.reveal && st.fired < st.reveal.length) st.reveal[st.fired++][1]();
       next();
@@ -496,7 +585,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     zone.visible = on(vis.zone);
     wz.visible = on(vis.wz);
     bounceMark.visible = on(vis.bounce) && !!seq.lbw?.track.bounce;
-    impactMark.visible = on(vis.impact);
+    impactMark.visible = on(vis.impact) && !!seq.lbw?.track.impact;
     ghost.visible = on(vis.ghost);
     if (tube) {
       tube.visible = on(vis.tube);
@@ -577,7 +666,7 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     c.setLineDash([]);
     c.fillStyle = '#f3c94a';
     c.font = '10px ui-monospace, Menlo, monospace';
-    c.fillText(s.lbw ? 'pad' : 'bat', xp + 4, 11);
+    c.fillText(s.lbw?.track.impact ? 'pad' : 'bat', xp + 4, 11);
     snickEl.querySelector('#drs-snick-t').textContent = `${((tNow - s.tPass) * 1000).toFixed(0)} ms`;
   }
 
@@ -593,6 +682,12 @@ export function createDrs({ ctl, scene, camera, root, audio, aspect, fx }) {
     }
     if (seq) {
       if (k === 'skip' || k === 'enter') api.skip();
+      // An analysis can be left any time (a real review runs to its decision).
+      else if (seq.analysis && (k === 'pause' || k === 'replay' || k === 'review')) {
+        seq.i = seq.steps.length - 1;
+        seq.steps[seq.i].reveal = [];
+        next();
+      }
       return true;
     }
     return false;

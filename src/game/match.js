@@ -1,4 +1,4 @@
-import { GAME, DIFFICULTY, makeRng } from './rules.js';
+import { GAME, DIFFICULTY, FORMATS, POWERPLAY, MAX_OUT, RELEASE_PT, RELEASE_ROUND, makeRng } from './rules.js';
 import { buildDelivery, LINE_NAMES, LENGTH_NAMES, lengthOf, lineOf } from './delivery.js';
 import { SHOTS, resolveShot, lawsCheck, shotFoot } from './batting.js';
 import { simulateBatted } from './ballSim.js';
@@ -23,7 +23,12 @@ import { decideLbw, decideEdgeCatch, decidePhantomEdge } from './umpire.js';
  * the default for the simulator) and whether the batter may review (3 per
  * innings; one that ends on umpire's call is kept).
  */
-export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null, umpire = null } = {}) {
+/**
+ * format: 5, 10 or 20 overs (FORMATS). target: the runs to win; leave it out
+ * for the AI's own target, or null to bat first (no target: the innings
+ * simply ends, result 'innings'). superOver: one over, two wickets.
+ */
+export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null, umpire = null, format = 5, target, superOver = false } = {}) {
   const diff = DIFFICULTY[difficulty];
   const rng = makeRng(seed);
   const m = {
@@ -50,16 +55,28 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     umpireBad: umpire?.bad ?? 0,
     drs: !!umpire?.drs,
     reviewsLeft: nets ? Infinity : 3,
+    format,
+    overs: superOver ? 1 : (FORMATS[format] ?? FORMATS[5]).overs,
+    wickets: superOver ? 2 : (FORMATS[format] ?? FORMATS[5]).wickets,
+    superOver,
+    aiReviewsLeft: nets ? Infinity : superOver ? 1 : 3, // the fielding side's
+    powerplayOvers: nets || superOver ? 0 : POWERPLAY[format] ?? 2,
   };
-  m.target = setTarget(diff, rng);
+  if (superOver) m.reviewsLeft = 1;
+  m.target = target === undefined ? setTarget(diff, rng, m.overs) : target;
 
-  m.ballsLeft = () => GAME.overs * GAME.ballsPerOver - m.balls;
-  m.need = () => m.target - m.runs;
+  m.ballsLeft = () => m.overs * GAME.ballsPerOver - m.balls;
+  m.need = () => (m.target == null ? 0 : m.target - m.runs);
   m.overText = () => `${Math.floor(m.balls / 6)}.${m.balls % 6}`;
+
+  /** In the powerplay (this over, or the over `over`)? */
+  m.inPowerplay = (over = Math.floor(m.balls / GAME.ballsPerOver)) => over < m.powerplayOvers;
+  /** How many fielders may be outside the circle this over (none of it in the nets). */
+  m.maxOut = () => (m.nets ? Infinity : m.inPowerplay() ? MAX_OUT.powerplay : MAX_OUT.after);
 
   m.startOver = () => {
     m.plan = planOver(m, m.memory, rng);
-    m.field = fieldPositions(m.plan.field);
+    m.field = fieldPositions(m.plan.field, { maxOut: m.maxOut() });
     m.thisOver = [];
     return m.plan;
   };
@@ -68,12 +85,16 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
   m.nextDelivery = (force = null) => {
     let spec = chooseDelivery(m, m.plan, m.memory, rng);
     if (force) {
+      const aiSide = spec.side;
       spec = { ...spec, ...force };
       spec.length = lengthOf(spec.lenM);
       spec.line = lineOf(spec.lineZ);
       spec.typeName = TYPES[spec.type]?.name ?? spec.typeName;
+      // A forced ball is over the wicket unless it says otherwise ('auto': the AI's choice).
+      spec.side = force.side === 'auto' ? aiSide : force.side ?? 'over';
     }
-    const del = buildDelivery(spec, diff.pace);
+    // Over or round the wicket: the delivery is solved from that release point.
+    const del = buildDelivery(spec, diff.pace, spec.side === 'round' ? RELEASE_ROUND : RELEASE_PT);
     return { spec, del };
   };
 
@@ -174,6 +195,17 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     if (lost && m.reviewsLeft !== Infinity) m.reviewsLeft--;
     return { overturned, umpiresCall, lost };
   };
+  /** The fielding side's review of a not-out: overturned means out. */
+  m.aiReview = (o) => {
+    const t = o.umpire.truth;
+    const overturned = t === 'out';
+    const umpiresCall = t === 'umpiresCall';
+    const lost = !overturned && !umpiresCall;
+    if (lost && m.aiReviewsLeft !== Infinity) m.aiReviewsLeft--;
+    return { overturned, umpiresCall, lost, by: 'ai' };
+  };
+  /** The same ball, given out after the fielding side's review. */
+  m.overturnToOut = (o) => ({ ...o, out: o.umpire.kind === 'lbw' ? 'lbw' : 'caught', overturned: true, runs: 0, call: 'OUT · overturned on review' });
   /** The same ball, given not out after a review. */
   m.overturn = (o) => ({ ...o, out: null, overturned: true, fielding: o.fielding?.phantom ? null : o.fielding && { ...o.fielding, type: 'field', runs: 0 }, runs: 0, call: 'NOT OUT · overturned on review' });
 
@@ -194,8 +226,10 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     const overEnd = o.legal && m.balls % GAME.ballsPerOver === 0;
     if (overEnd) m.strikerIdx ^= 1;
     if (m.nets) return { overEnd, result: null };
-    if (m.runs >= m.target) m.result = 'won';
-    else if (m.wkts >= GAME.wickets || m.balls >= GAME.overs * GAME.ballsPerOver) m.result = m.runs === m.target - 1 ? 'tied' : 'lost';
+    const over = m.wkts >= m.wickets || m.balls >= m.overs * GAME.ballsPerOver;
+    if (m.target == null) m.result = over ? 'innings' : null;
+    else if (m.runs >= m.target) m.result = 'won';
+    else if (over) m.result = m.runs === m.target - 1 ? 'tied' : 'lost';
     return { overEnd, result: m.result };
   };
 

@@ -25,7 +25,7 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e.stack || e)));
-await page.goto(`${BASE}?mode=game&cards=0&manual=1&seed=4`);
+await page.goto(`${BASE}?mode=game&cards=0&manual=1&seed=4&ump=0`);
 await page.waitForFunction(() => window.__dioramaReady === true);
 await page.evaluate(() => localStorage.removeItem('chase-gamepad-v1'));
 // Each poll happens on a frame: step a frame after every change.
@@ -38,9 +38,13 @@ await page.evaluate(() => window.__padConnect());
 const toast = await page.evaluate(() => [...document.querySelectorAll('#hud .panel')].map((e) => e.textContent).find((t) => t.includes('connected')));
 check(!!toast && toast.includes('Stadia'), `connect toast: "${toast?.trim()}"`);
 
-// A on the intro card starts the match.
+// A on the intro card opens the toss; D-pad right calls tails; then straight into a chase.
 await press({ 0: true }); await release();
-check(await page.evaluate(() => window.__game.ctl.phase === 'live'), 'A on the intro card starts the match');
+await press({ 15: true, 0: true }); await release();
+const tossed = await page.evaluate(() => ({ stage: window.__game.flow.stage, text: document.querySelector('#flow')?.innerText ?? '' }));
+check(['flip', 'choose', 'aiChose'].includes(tossed.stage) && /tails/i.test(tossed.text), `A opens the toss, right + A calls tails (${tossed.stage})`);
+await page.evaluate(() => { window.__game.flow.close(); window.__game.start(); });
+check(await page.evaluate(() => window.__game.ctl.phase === 'live'), 'the match starts');
 
 // A ball: D-pad down + left, then A -> cover drive, timed from the pad's timestamp.
 const shot = async (btns, axes, mk) => {
@@ -77,7 +81,7 @@ await press({ 16: true }); await release();
 check(await page.evaluate(() => !window.__game.padPanel.isOpen), 'Stadia button closes it again');
 
 // The mapping survives a reload.
-await page.goto(`${BASE}?mode=game&cards=0&manual=1&seed=4`);
+await page.goto(`${BASE}?mode=game&cards=0&manual=1&seed=4&ump=0`);
 await page.waitForFunction(() => window.__dioramaReady === true);
 check(await page.evaluate(() => window.__game.pad.settings.map.lofted === 7), 'mapping persists across a reload');
 await page.evaluate(() => localStorage.removeItem('chase-gamepad-v1'));

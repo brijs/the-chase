@@ -7,7 +7,8 @@ import { tuning } from '../src/game/tuning.js';
 import { simulateBatted } from '../src/game/ballSim.js';
 import { resolveConditions } from '../src/game/conditions.js';
 import { trackLbw, lbwVerdict, decideLbw, decideEdgeCatch, decidePhantomEdge } from '../src/game/umpire.js';
-import { makeRng } from '../src/game/rules.js';
+import { makeRng, RELEASE_PT, RELEASE_ROUND } from '../src/game/rules.js';
+import { fieldPositions } from '../src/game/fielding.js';
 
 // CAL=calibration.json runs with a calibration applied (default: code defaults).
 if (process.env.CAL) {
@@ -111,7 +112,7 @@ cases.push(['no conditions = the neutral day (calm, standard)', () => 0, () => {
 const lbwBall = (o) => buildDelivery({ type: 'straight', kph: 136, lenM: 5.2, lineZ: -0.02, hStumps: 0.45, swing: 0, seam: 0, length: 'good', ...o }, 0.72);
 const plumb = trackLbw(lbwBall({}), 'stance', false);
 cases.push([`plumb: pitching ${plumb?.pitching}, impact ${plumb?.impact}, wickets ${plumb?.wickets} -> ${plumb && lbwVerdict(plumb)}`, () => 0, () => plumb && lbwVerdict(plumb) === 'out']);
-const leg = trackLbw(lbwBall({ lineZ: -0.05, seam: 0.3 }), 'stance', false);
+const leg = trackLbw(lbwBall({ lineZ: -0.05, seam: 0.45 }), 'stance', false);
 cases.push([`seamed in from outside leg: pitching ${leg?.pitching} -> ${leg && lbwVerdict(leg)}`, () => 0, () => leg && leg.pitching === 'outsideLeg' && lbwVerdict(leg) === 'notOut']);
 const high = trackLbw(lbwBall({ hStumps: 0.76 }), 'stance', false);
 cases.push([`clipping the bails: wickets ${high?.wickets} -> ${high && lbwVerdict(high)}`, () => 0, () => high && high.wickets === 'umpiresCall' && lbwVerdict(high) === 'umpiresCall']);
@@ -121,7 +122,7 @@ const perfect = decideLbw({ del: lbwBall({}), foot: 'stance', offered: false, ba
 cases.push(['a perfect umpire (bad 0) gives the plumb one', () => 0, () => perfect.given && perfect.truth === 'out']);
 const share = (f, n = 2000) => { const r = makeRng(7); let k = 0; for (let i = 0; i < n; i++) if (f(r)) k++; return k / n; };
 const plumbGiven = share((r) => decideLbw({ del: lbwBall({}), foot: 'stance', offered: false, bad: 0.25, rng: r }).given);
-const legGiven = share((r) => decideLbw({ del: lbwBall({ lineZ: -0.05, seam: 0.2 }), foot: 'stance', offered: false, bad: 0.25, rng: r }).given);
+const legGiven = share((r) => decideLbw({ del: lbwBall({ lineZ: -0.05, seam: 0.36 }), foot: 'stance', offered: false, bad: 0.25, rng: r }).given);
 cases.push([`umpire at 25%: plumb given ${(plumbGiven * 100).toFixed(0)}%, just outside leg given ${(legGiven * 100).toFixed(0)}%`, () => 0, () => plumbGiven > 0.85 && plumbGiven < 0.95 && legGiven > 0.05 && legGiven < 0.3]);
 const faint = { az: Math.PI - 0.15, edge: 'outside' };
 const thick = { az: Math.PI - 0.6, edge: 'outside' };
@@ -138,6 +139,33 @@ cases.push([`caught behind off nothing: ${(phantom * 100).toFixed(1)}% of balls 
   const b = m.review({ ...o, umpire: { ...o.umpire, truth: 'umpiresCall' } });
   const c = m.review({ ...o, umpire: { ...o.umpire, truth: 'notOut' } });
   cases.push([`reviews: upheld costs one (${m.reviewsLeft} left after upheld, umpire's call, overturned)`, () => 0, () => a.lost && b.umpiresCall && !b.lost && c.overturned && m.reviewsLeft === 2 && m.overturn(o).out === null]);
+}
+
+// Round the wicket: the same ball from the other side of the stumps.
+const both = (spec) => [RELEASE_PT, RELEASE_ROUND].map((rel) => buildDelivery({ type: 'straight', kph: 136, lenM: 5.2, hStumps: 0.42, swing: 0, seam: 0, length: 'good', ...spec }, 0.72, rel));
+{
+  const [o1, r1] = both({ lineZ: 0.0 });
+  cases.push([`at middle: over pitches at z ${o1.bounce.z.toFixed(2)} (angle ${o1.angle.toFixed(2)}), round at ${r1.bounce.z.toFixed(2)} (angle +${r1.angle.toFixed(2)})`, () => 0, () => o1.angle < 0 && r1.angle > 0.6 && r1.bounce.z < o1.bounce.z - 0.2]);
+  const [o2, r2] = both({ lineZ: -0.08 });
+  const to = trackLbw(o2, 'stance', false), tr2 = trackLbw(r2, 'stance', false);
+  cases.push([`at leg stump: over pitches ${to?.pitching}, round pitches ${tr2?.pitching} (so it can't be lbw)`, () => 0, () => to?.pitching === 'inline' && tr2?.pitching === 'outsideLeg']);
+  const [, r3] = both({ lineZ: 0.12, lenM: 3.2, length: 'full', hStumps: 0.3 });
+  cases.push([`round, full at off stump: angled across ${r3.angle.toFixed(2)} m, still pitching ${trackLbw(r3, 'front', true)?.pitching ?? 'clear of the pad'}`, () => 0, () => r3.angle > 0.8]);
+  const share = (() => { let n = 0, k = 0; for (let sd = 1; sd <= 60; sd++) { const m = createMatch({ seed: sd }); m.startOver(); for (let b = 0; b < 6; b++) { n++; if (m.nextDelivery().spec.side === 'round') k++; } } return k / n; })();
+  cases.push([`the AI bowls round the wicket ${(share * 100).toFixed(0)}% of the time`, () => 0, () => share > 0.08 && share < 0.4]);
+}
+// Fielding restrictions.
+{
+  const outs = (p, mo) => fieldPositions(p, { maxOut: mo }).filter((f) => f.out).length;
+  cases.push([`death field: ${outs('death', Infinity)} out unrestricted, ${outs('death', 5)} after the powerplay, ${outs('death', 2)} in it`, () => 0, () => outs('death', 5) === 5 && outs('death', 2) === 2]);
+  const ringOk = ['attack', 'balanced', 'death'].every((p) => fieldPositions(p, { maxOut: 5 }).filter((f) => !f.out).length >= 4);
+  cases.push(['ring fielders stand inside the circle', () => 0, () => ringOk]);
+  const pp = [5, 10, 20].map((format) => { const m = createMatch({ seed: 2, format }); return m.powerplayOvers; });
+  const m = createMatch({ seed: 2, format: 20 });
+  m.startOver();
+  const first = m.maxOut();
+  m.balls = 36;
+  cases.push([`powerplays: ${pp.join(' / ')} overs of 5 / 10 / 20; in it max ${first} out, after it ${m.maxOut()}`, () => 0, () => pp.join() === '2,3,6' && first === 2 && m.maxOut() === 5 && createMatch({ seed: 1, superOver: true }).powerplayOvers === 0]);
 }
 
 let fail = 0;

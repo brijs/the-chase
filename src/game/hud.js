@@ -1,4 +1,4 @@
-import { GAME, DIFFICULTY } from './rules.js';
+import { DIFFICULTY, FORMATS } from './rules.js';
 import { SHOTS } from './batting.js';
 import { describeConditions, WIND, WIND_DIR } from './conditions.js';
 
@@ -94,7 +94,7 @@ function conditionsHtml(sel) {
   return `${d.sky} · <span class="arrow">${arrow}</span> ${d.wind}<br>${d.pitch} · ${d.outfield}`;
 }
 
-export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTune, onController, onConditions } = {}) {
+export function createHud({ hidden = false, onPick, onFormat, onStart, onPad, onNets, onTune, onController, onConditions } = {}) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -194,7 +194,7 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
       later(pv.t0, () => {
         nextPv = pv;
         info.classList.remove('on');
-        next.innerHTML = `<div class="k">THE READ · WATCH THE MARKER</div><span class="type">${pv.typeName.toUpperCase()}</span> · ${LEN[pv.length]} · ${LINE[pv.line]}<div class="bar"></div>`;
+        next.innerHTML = `<div class="k">THE READ · WATCH THE MARKER${pv.side === 'round' ? ' · <b style="color:#9a2731">ROUND THE WICKET</b>' : ''}</div><span class="type">${pv.typeName.toUpperCase()}</span> · ${LEN[pv.length]} · ${LINE[pv.line]}<div class="bar"></div>`;
         next.classList.add('on');
       });
       later(pv.t1, () => next.classList.remove('on'));
@@ -234,41 +234,57 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
         const bl = m.ballsLeft();
         const rrr = bl > 0 ? ((need / bl) * 6).toFixed(1) : '-';
         const chips = m.thisOver.map((c) => `<span class="${c === 'W' ? 'w' : c === '4' ? 'b4' : c === '6' ? 'b6' : ''}">${c === '0' ? '•' : c}</span>`).join('');
-        top.innerHTML = `<span class="dim">TARGET</span> <b>${m.target}</b>
-          <span><b>${m.runs}/${m.wkts}</b> <span class="dim">(${m.overText()} of ${GAME.overs})</span></span>
-          ${m.result ? '' : `<span class="need">Need ${Math.max(0, need)} off ${bl}</span><span class="dim">RRR ${rrr}</span>`}
-          ${m.drs ? `<span class="dim" title="reviews left">DRS ${'●'.repeat(m.reviewsLeft)}${'○'.repeat(3 - m.reviewsLeft)}</span>` : ''}
+        const rr = m.balls ? ((m.runs / m.balls) * 6).toFixed(1) : '0.0';
+        top.innerHTML = `${m.superOver ? '<b style="color:#9a2731">SUPER OVER</b>' : ''}${!m.result && m.inPowerplay?.() ? '<b style="color:#283a63" title="fielding restrictions: at most 2 outside the circle">PP</b>' : ''}${m.target == null ? (m.superOver ? '' : '<span class="dim">1ST INNINGS</span>') : `<span class="dim">TARGET</span> <b>${m.target}</b>`}
+          <span><b>${m.runs}/${m.wkts}</b> <span class="dim">(${m.overText()} of ${m.overs})</span></span>
+          ${m.result ? '' : m.target == null ? `<span class="dim">RR ${rr} · projected ${Math.round(m.runs + (m.balls ? (m.runs / m.balls) * bl : 0))}</span>` : `<span class="need">Need ${Math.max(0, need)} off ${bl}</span><span class="dim">RRR ${rrr}</span>`}
+          ${m.drs ? `<span class="dim" title="reviews left: yours · theirs">DRS ${'●'.repeat(m.reviewsLeft)}${'○'.repeat(Math.max(0, (m.superOver ? 1 : 3) - m.reviewsLeft))} · them ${'●'.repeat(m.aiReviewsLeft)}${'○'.repeat(Math.max(0, (m.superOver ? 1 : 3) - m.aiReviewsLeft))}</span>` : ''}
           <span id="hud-over">${chips}</span>`;
       });
     },
     over(m, plan, t = lastT) {
       const n = Math.floor(m.balls / 6) + 1;
       later(t, () => {
-        planEl.innerHTML = `<div class="k">OVER ${n} OF ${GAME.overs} · THE BOWLER'S PLAN</div>${plan.name}<div class="k" style="margin-top:4px">FIELD · ${plan.field.toUpperCase()}</div>`;
+        const out = m.field.filter((f) => f.out).length;
+        planEl.innerHTML = `<div class="k">OVER ${n} OF ${m.overs}${m.inPowerplay?.() ? ' · <b style="color:#9a2731">POWERPLAY</b>' : ''} · THE BOWLER'S PLAN</div>${plan.name}${plan.side === 'round' ? ' · <b>round the wicket</b>' : ''}<div class="k" style="margin-top:4px">FIELD · ${plan.field.toUpperCase()} · ${out} OUT${m.maxOut?.() < Infinity ? ` (MAX ${m.maxOut()})` : ''}</div>`;
         planEl.classList.add('on');
         hud.score(m, t);
       });
       later(t + 6, () => planEl.classList.remove('on'));
     },
-    final(m, t = lastT) {
+    /** The end of your innings. teams: { yours, theirs }; other: their innings in one line, if they batted first. */
+    final(m, t = lastT, { teams = null, other = null } = {}) {
       later(t, () => {
         const ballsLeft = m.ballsLeft();
+        if (m.result === 'innings') {
+          // Batting first: the total is set; the AI's chase comes next.
+          card.innerHTML = `<h1>${m.superOver ? 'Super over done' : 'Innings complete'}</h1><div class="big">${m.runs}/${m.wkts}</div>
+            <p>${m.wkts >= m.wickets ? 'All out' : `${m.overs} overs`} · run rate ${((m.runs / Math.max(1, m.balls)) * 6).toFixed(2)} · fours ${m.fours} · sixes ${m.sixes}</p>
+            <p><b>${teams?.theirs ?? 'The AI'}</b> need <b>${m.runs + 1}</b> to win off ${m.superOver ? 'their super over' : `${m.overs} overs`}.</p>
+            <div class="row"><button class="go" data-act="again">Their chase (Enter)</button></div>`;
+          card.classList.add('on');
+          card.querySelector('[data-act=again]').onclick = () => onStart?.();
+          call.className = '';
+          return;
+        }
         let head, big;
+        const so = m.superOver ? 'Super over' : 'Chase';
         if (m.result === 'won') {
-          head = 'Chase won';
-          big = `by ${GAME.wickets - m.wkts} wicket${GAME.wickets - m.wkts === 1 ? '' : 's'}`;
+          head = `${so} won`;
+          big = `by ${m.wickets - m.wkts} wicket${m.wickets - m.wkts === 1 ? '' : 's'}`;
         } else if (m.result === 'tied') {
-          head = 'Tied';
-          big = 'scores level';
+          head = m.superOver ? 'Super over tied' : 'Tied';
+          big = m.superOver ? 'another super over' : 'scores level: super over';
         } else {
           const by = m.target - 1 - m.runs;
-          head = 'Chase lost';
+          head = `${so} lost`;
           big = `by ${by} run${by === 1 ? '' : 's'}`;
         }
         card.innerHTML = `<h1>${head}</h1><div class="big">${big}</div>
           <p>${m.runs}/${m.wkts} in ${m.overText()} overs, chasing ${m.target}${m.result === 'won' && ballsLeft ? ` · ${ballsLeft} ball${ballsLeft === 1 ? '' : 's'} to spare` : ''}</p>
+          ${other ? `<p class="small">${other}</p>` : ''}
           <p class="small">Fours ${m.fours} · Sixes ${m.sixes} · Extras ${m.extras} · ${DIFFICULTY[m.difficulty].label}</p>
-          <div class="row"><button class="go" data-act="again">Play again (Enter)</button></div>
+          <div class="row"><button class="go" data-act="again">${m.result === 'tied' ? 'Super over' : 'New match'} (Enter)</button></div>
           <p class="small"><a href="?">Watch the diorama</a></p>`;
         card.classList.add('on');
         card.querySelector('[data-act=again]').onclick = () => onStart?.();
@@ -281,19 +297,23 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
       condEl.innerHTML = `<div class="k">CONDITIONS · O</div>${conditionsHtml(sel)}`;
       condEl.classList.add('on');
     },
-    intro({ target, difficulty, teams, conditions, random }) {
+    intro({ difficulty, format = 5, teams, conditions, random }) {
       const diffs = Object.entries(DIFFICULTY).map(([k, d], i) => `<button data-diff="${k}" class="${k === difficulty ? 'on' : ''}">${i + 1} · ${d.label}</button>`).join('');
+      const fmts = Object.entries(FORMATS).map(([k, f], i) => `<button data-format="${k}" class="${+k === +format ? 'on' : ''}">${f.label} <span class="small">(${i + 4})</span></button>`).join('');
+      const F = FORMATS[format];
       card.innerHTML = `<h1>THE CHASE</h1>
-        ${teams ? `<p class="small" style="margin:2px 0 6px"><b>${teams.bat}</b> v <b>${teams.bowl}</b></p>` : ''}<p>The AI has set you <b>${target}</b> to win off <b>${GAME.overs} overs</b>, with <b>${GAME.wickets} wickets</b>.<br>You bat. It bowls, sets the field, and learns where you score.</p>
+        ${teams ? `<p class="small" style="margin:2px 0 6px"><b>${teams.bat}</b> (you) v <b>${teams.bowl}</b></p>` : ''}<p><b>${F.overs} overs</b> a side, <b>${F.wickets} wickets</b>. Toss, then bat first or chase.<br>You always bat: the AI's innings is played out for you. It bowls, sets the field, and learns where you score.</p>
+        <div class="row">${fmts}</div>
         <div class="row">${diffs}</div>
         ${conditions ? `<div><div class="cond">${conditionsHtml(conditions)}</div><div class="row" style="margin:6px 0 10px"><button data-act="cond">Conditions (O)${random ? ' · 🎲 random' : ''}</button></div></div>` : ''}
         <div class="keys">${GRID.map(([, k, n]) => `<div><b>${k}</b> ${n}</div>`).join('')}</div>
         <p class="small">During the run-up an amber marker shows where the ball is <i>aimed</i> to pitch, with its line and type. Read it, then watch the ball: bowlers miss their spot, and on harder levels the read comes later, vaguer, and sometimes lies.</p>
         <p class="small">Hold the arrows for a direction, press <b>D</b> to play along the ground or <b>A</b> to loft it. No key is a leave. <b>S</b> plays a special: sweep, <b>S</b>+← reverse sweep, <b>S</b>+↑ scoop. They pay well and need tighter timing.<br>Time it so the bat meets the ball: early drags it leg side, late finds the edge.</p>
-        <div class="row"><button class="go" data-act="go">Bat (Enter)</button><button data-act="nets">Calibrate in the nets (N)</button><button data-act="tune">Tuning (T)</button><button data-act="controller">🎮 Controller (K)</button></div>
+        <div class="row"><button class="go" data-act="go">Toss (Enter)</button><button data-act="nets">Calibrate in the nets (N)</button><button data-act="tune">Tuning (T)</button><button data-act="controller">🎮 Controller (K)</button></div>
         <p class="small"><a href="?">Back to the diorama</a> · C camera · Space skip · G timing meter · M sound</p>`;
       card.classList.add('on');
       card.querySelectorAll('[data-diff]').forEach((b) => (b.onclick = () => onPick?.(b.dataset.diff)));
+      card.querySelectorAll('[data-format]').forEach((b) => (b.onclick = () => onFormat?.(+b.dataset.format)));
       card.querySelector('[data-act=go]').onclick = () => onStart?.();
       card.querySelector('[data-act=nets]').onclick = () => onNets?.();
       card.querySelector('[data-act=tune]').onclick = () => onTune?.();

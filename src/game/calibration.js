@@ -53,6 +53,7 @@ const PICK = {
   type: [['auto', 'Auto'], ...Object.entries(TYPES).map(([k, t]) => [k, t.name])],
   length: [['auto', 'Auto'], ...Object.keys(LENGTHS).map((k) => [k, LENGTH_NAMES[k]])],
   line: [['auto', 'Auto'], ...Object.keys(LINES).map((k) => [k, LINE_NAMES[k]])],
+  side: [['auto', 'Auto'], ['over', 'Over the wicket'], ['round', 'Round the wicket']],
   field: [['attack', 'Attack'], ['balanced', 'Balanced'], ['death', 'Death']],
   level: Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]),
 };
@@ -118,7 +119,7 @@ export function createCalibration({ ctl, tuning, root, onTune, onExit }) {
   }
   card.style.display = '';
 
-  const sel = { type: 'auto', length: 'auto', line: 'auto', field: 'balanced', level: 'medium' };
+  const sel = { type: 'auto', length: 'auto', line: 'auto', side: 'auto', field: 'balanced', level: 'medium' };
   const session = { balls: 0, answered: 0, changes: 0 };
   let open = null; // { sample, answers, phase: 'ask' | 'done' }
   let last = null; // the most recent ball's sample
@@ -127,8 +128,8 @@ export function createCalibration({ ctl, tuning, root, onTune, onExit }) {
 
   // ---------------------------------------------------------------- picker
   function drawPick() {
-    pick.innerHTML = `<div class="k" style="margin-top:0">NETS · WHAT TO BOWL NEXT</div>` + ['type', 'length', 'line', 'field', 'level'].map((g) =>
-      `<div class="k">${{ type: 'TYPE', length: 'LENGTH', line: 'LINE', field: 'FIELD', level: 'LEVEL (TIMING WINDOWS, PACE)' }[g]}</div><div class="opts">${PICK[g].map(([k, n]) => `<button data-g="${g}" data-k="${k}" class="${sel[g] === k ? 'on' : ''}">${n}</button>`).join('')}</div>`
+    pick.innerHTML = `<div class="k" style="margin-top:0">NETS · WHAT TO BOWL NEXT</div>` + ['type', 'length', 'line', 'side', 'field', 'level'].map((g) =>
+      `<div class="k">${{ type: 'TYPE', length: 'LENGTH', line: 'LINE', side: 'BOWLING FROM', field: 'FIELD', level: 'LEVEL (TIMING WINDOWS, PACE)' }[g]}</div><div class="opts">${PICK[g].map(([k, n]) => `<button data-g="${g}" data-k="${k}" class="${sel[g] === k ? 'on' : ''}">${n}</button>`).join('')}</div>`
     ).join('') + `<div class="note">Applies from the next ball. Auto lets the AI choose.</div>`;
   }
   pick.addEventListener('click', (e) => {
@@ -168,7 +169,10 @@ export function createCalibration({ ctl, tuning, root, onTune, onExit }) {
       f.aimLineZ = f.lineZ;
       f.aimedLine = sel.line;
     }
-    return Object.keys(f).length ? f : null;
+    if (!Object.keys(f).length && sel.side === 'auto') return null;
+    // The side: as picked, or the AI's own when Auto.
+    f.side = sel.side;
+    return f;
   };
 
   // ---------------------------------------------------------------- bar

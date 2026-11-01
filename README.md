@@ -42,8 +42,10 @@ is hidden automatically under browser automation, so QA frames never contain it.
 ## Game mode: The Chase
 
 `index.html?mode=game` (or **🏏 Play the chase** on the viewer bar) turns the
-set into a 5-over chase. The AI sets a target and you bat. It bowls, sets the
-field and learns where you score. You have 5 wickets.
+set into a limited-overs match: **5, 10 or 20 overs** a side (5 wickets in the
+short game, 10 in the others). Toss, then bat first or chase. You always bat:
+the AI's innings is simulated. It bowls, sets the field and learns where you
+score.
 
 The game uses the same renderer, palette and pixel pass as the diorama. It has
 its own miniature oval (rope about 30 m straight, 20 m square and 14 m fine), a
@@ -93,6 +95,84 @@ The other keys:
 | 1 / 2 / 3 | difficulty, on the intro card |
 
 Touch devices get an on-screen 3×3 pad and a LOFT toggle.
+
+### Match length, the toss and the AI's innings
+
+Pick the length on the intro card (keys **4 / 5 / 6** for 5, 10 or 20 overs;
+remembered in this browser), then **Enter** for the toss. Their captain
+tosses and you call: ← heads, → tails, Enter (on the controller, hold a
+direction and press A). The coin spins.
+
+- **Win the toss:** choose to bat first (1) or bowl first (2).
+- **Lose it:** the AI chooses by the conditions. Cloud or a green top means
+  bowl; a crumbling pitch, or a flat road in the sun, means bat. Otherwise
+  it's a coin-flip with a lean to chasing.
+
+You only ever bat, so **their innings is simulated**. It goes ball by ball
+through the same engine as yours: the automated bowler bowls for your side,
+with the same fielders and the same umpires. Their batter's timing is set by
+the difficulty, so harder levels make bigger totals and chase harder. It
+plays out on a card one over at a time, with the running score and who fell
+(Space skips to the end, B shows the full scorecard).
+
+- **Bowl first:** their innings, then you chase their total + 1.
+- **Bat first:** there is no target. The bar shows the run rate and a
+  projected score. When your innings ends, their chase is played out and the
+  result is given in team names (*Northgate Mariners won by 3 wickets (3
+  balls left)*). **New match** goes back to the intro.
+
+**Super over.** If the scores finish level, there's a super over: one over a
+side, two wickets, and the higher score wins. As in the playing conditions,
+the side that batted second bats first. If it's tied again, there's another,
+until someone wins. Yours is played; theirs is simulated like their innings.
+The bar shows *SUPER OVER*; each side gets one review.
+
+Bowling changes for the longer games: five bowlers share the overs, at most
+two each in a 10-over game or four in a T20, never two in a row. The
+bowler's plans stretch to fit: the new ball for the first fifth of the
+innings, the death for the last fifth.
+
+Balance (`qa/game-innings.mjs`, a bot with human-like 28 ms timing): on
+Medium it wins about 55–60% chasing and about 50–60% batting first, at every
+length. Easy is about 95%; Hard is 5–17%.
+
+### Fielding restrictions and the powerplay
+
+A ring of white discs marks the fielding circle (the "30-yard" circle, scaled
+with the ground).
+- **In the powerplay** (the first 30% of the innings, in whole overs: 2 of 5,
+  3 of 10, 6 of 20) at most **two** fielders may be outside it.
+- **After the powerplay**, at most **five**.
+- **When a field asks for more:** the AI captain brings the extra deep
+  fielders up to save one, least needed first (deep cover before long-on,
+  long-on before fine leg).
+- **Ring fielders** always stand inside the circle.
+- **On screen:** the over panel shows *POWERPLAY* and how many are out
+  (*FIELD · DEATH · 2 OUT (MAX 2)*), and the score bar shows *PP*.
+- **No restrictions** in a super over or the nets.
+
+### Over and round the wicket
+
+The AI picks a side for each over, with the odd single ball from the other
+side. Round the wicket is used most for the short-ball and attack-the-stumps
+plans; in all, about one ball in five. The read says *ROUND THE WICKET*.
+- **The bowler** runs in on the other side of the stumps, as a right-armer,
+  with the arm away from them. Changing sides, he sidesteps at the top of
+  his mark.
+- **The umpire** steps across to make room.
+- **The non-striker** walks round to the off side in front of the stumps
+  and backs up there. The running lanes mirror, so the batters never cross.
+- **The keeper** reads the line from the bowler's hand.
+- **What changes for the ball:** each delivery is solved from that release
+  point, and its angle now carries through the bounce (over the wicket it
+  angles in; round the wicket it angles across).
+  - Round the wicket, a ball at leg stump pitches outside leg, so it can't be
+    out LBW, and a straight ball is harder to have in line.
+  - A ball angled across a right-hander finds the outside edge a little more,
+    as if it moved a few centimetres more (tunable: *Angle across the
+    batter*).
+  - Timing doesn't change: the pace and the length are what time the shot.
+- **In the nets** the picker can force either side.
 
 ### Conditions
 
@@ -147,7 +227,19 @@ under it and a bleep for each finding:
   lost*. The crowd, on the batter's side, cheers or boos.
 
 Space during a review skips to the decision. The DRS dots in the score bar
-show the reviews left. The nets have unlimited reviews.
+show the reviews left, yours and theirs. The nets have unlimited reviews.
+
+**The AI reviews too.** When you're given not out on an appeal, the fielding
+side may review it, with its own three reviews (kept on umpire's call). After
+a moment's huddle the same views run, headed *the fielding side's review*.
+- **When it reviews:** a missed edge the keeper heard, or a plumb LBW the
+  umpire missed, usually. Umpire's-call territory, sometimes. A near miss,
+  now and then, as a punt.
+- **The result:** overturned means you're out (the finger goes up and the
+  crowd boos); a decision that stands gets a cheer.
+- **In the AI's own innings:** its batter reviews being given out when it
+  knows it wasn't (outside leg, no edge), rarely when plumb. These show on
+  the innings card (↺).
 
 ### Scorecard
 
@@ -185,10 +277,20 @@ shows it identically.
 | View: ball cam, side-on, broadcast, free | C | Camera (L1) |
 | Free camera: rotate · zoom · pan | drag · scroll / pinch · right-drag (dragging switches to it) | right stick · D-pad up / down |
 | Restart | Home | n/a |
+| Review: ball tracking and UltraEdge on this ball (an analysis, not a challenge) | V | R2 |
 | Back to the game | R / Esc | Back (B) or L2 |
 
 The bar also has a timeline with marks for the release, the contact and the
-take, plus buttons for every control. The **ball cam** is front-on like the
+take, plus buttons for every control. **🎯 Review** runs the third umpire's
+views on the ball as an analysis: nothing changes and no review is used.
+- **Pad:** a ball that hits the pad gets the full LBW track and tracking's
+  verdict, next to the on-field decision.
+- **Through:** a ball through to the keeper or into the stumps gets where
+  it pitched and whether it was hitting, clipping or missing.
+- **Shot:** UltraEdge (a full crack for a middled shot, a feather for an
+  edge), and where it was heading had it missed the bat.
+
+Esc leaves the analysis. The **ball cam** is front-on like the
 broadcast: from behind the bowler for the delivery, then running ahead of the
 ball looking back at it, so the ball comes at you with the striker and the
 field behind. The **free** camera is yours to rotate, zoom and pan. **Follow
@@ -435,7 +537,11 @@ and with no calibration the outcome model is byte-for-byte unchanged.
 | `CAL=calibration.json node qa/game-sim.mjs` | Balance with a calibration applied (also works for `game-rules.mjs`). |
 | `node qa/game-poses.mjs`, `node qa/game-moments.mjs` | Close-ups of every shot at impact and at the finish, plus bowled, keeper take, catches, dives, walk-off and new batter (`qa/game/`). |
 | `node qa/game-conditions.mjs` | The Conditions panel and its effects on the match and the look; OUT, DROPPED, FOUR and SIX never show before the catch, drop or rope. |
-| `node qa/game-drs.mjs` | With an umpire who errs whenever he can: an LBW pitching outside leg is overturned (review kept), a plumb one stands (review lost, wicket falls), a caught-behind off nothing is overturned on UltraEdge, and an offer left to run out walks the batter. Screenshots of every stage in `qa/game/drs/`. |
+| `node qa/game-toss.mjs` | Match length on the intro card (remembered); the toss (call, coin, choice); their innings ticks up and shows its card, then your chase over the chosen length; batting first with no target, then their chase and the result in team names; back to the intro. |
+| `node qa/game-round.mjs` | Round the wicket: the angle, the read, the hand at the release point, the umpire and the non-striker across (no collisions, no jumps), back over the wicket with a sidestep; the circle and the powerplay panel. |
+| `node qa/game-superover.mjs` | A tie offers a super over; the side that batted second goes first (both orders); one over, two wickets; the chase and a named winner. |
+| `GAMES=100 node qa/game-innings.mjs` | Toss-game balance per level and length: the AI's totals, and a human-like bot chasing them or setting one. |
+| `node qa/game-drs.mjs` | With an umpire who errs whenever he can: an LBW pitching outside leg is overturned (review kept), a plumb one stands (review lost, wicket falls), a caught-behind off nothing is overturned on UltraEdge, an offer left to run out walks the batter, the replay's Review analyses the last ball without changing anything, and the fielding side reviews a plumb LBW given not out and has it overturned. Screenshots of every stage in `qa/game/drs/`. |
 | `UMP=0.25 node qa/game-sim.mjs` | Balance with an erring umpire and no reviews (also `COND='{"sky":"humid"}'`). |
 | `node qa/crowd-preview.mjs` | Records the crowd from the game's own mix to `qa/game/crowd-preview.wav`, with a spectrogram. |
 | `node qa/frame-hash.mjs` | Diorama frames are unchanged. |

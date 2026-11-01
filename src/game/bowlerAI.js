@@ -42,20 +42,32 @@ const LINE_W = {
   straight: { stumps: 3.5, off: 1.2, pads: 0.7, wide: 0.1 },
 };
 
-export function setTarget(diff, rng) {
-  return rng.int(diff.target[0], diff.target[1]);
+/**
+ * The AI's target for a chase of `overs` (the difficulty's range is for five).
+ * Longer games score a little slower per over but have twice the wickets.
+ */
+export function setTarget(diff, rng, overs = 5) {
+  const k = overs / 5 * (TARGET_SCALE[overs] ?? 1);
+  return Math.round(rng.int(diff.target[0], diff.target[1]) * k);
 }
+export const TARGET_SCALE = { 5: 1, 10: 1, 20: 0.9 };
 
 /** Over plan from the match state (required rate, wickets in hand, overs left). */
 export function planOver(m, memory, rng) {
+  const overs = m.overs ?? GAME.overs;
   const over = Math.floor(m.balls / GAME.ballsPerOver);
-  const left = GAME.overs - over;
-  const need = m.target - m.runs;
-  const rr = need / Math.max(1, (GAME.overs * GAME.ballsPerOver - m.balls) / 6);
+  const left = overs - over;
+  // Setting a total there is no rate to chase: bowl to a par of about nine an over.
+  const need = m.target == null ? 9 * left : m.target - m.runs;
+  const rr = need / Math.max(1, (overs * GAME.ballsPerOver - m.balls) / 6);
+  // The new ball for the first fifth of the innings, the death for the last.
+  const phase = Math.max(1, Math.round(overs * 0.2));
   let w;
-  if (over === 0) w = { newBall: 4, stumps: 1, channel: 0.6 };
-  else if (left === 1) w = { death: 4, shortBall: 0.8, stumps: 0.6 };
-  else w = { channel: 2, shortBall: 1.1, stumps: 1.4, death: rr > 11 ? 2 : 0.4, newBall: over === 1 ? 1.4 : 0.2 };
+  if (m.superOver) w = { death: 4, stumps: 0.6 };
+  else if (over === 0) w = { newBall: 4, stumps: 1, channel: 0.6 };
+  else if (left <= phase && left === 1) w = { death: 4, shortBall: 0.8, stumps: 0.6 };
+  else if (left <= phase) w = { death: 3, shortBall: 1, stumps: 0.8, channel: 0.6 };
+  else w = { channel: 2, shortBall: 1.1, stumps: 1.4, death: rr > 11 ? 2 : 0.4, newBall: over < phase ? 2.4 : over === 1 ? 1.4 : 0.2 };
   // A struggling batter gets attacked, a flying one gets the boundary riders.
   if (rr < 7) { w.stumps = (w.stumps ?? 0) + 1.5; w.newBall = (w.newBall ?? 0) + 0.6; }
   if (rr > 13) w.death = (w.death ?? 0) + 2.5;
@@ -66,7 +78,11 @@ export function planOver(m, memory, rng) {
   let field = plan.field;
   if (rr > 12 && field === 'attack') field = 'balanced';
   if (rr < 6 && field === 'death') field = 'balanced';
-  return { key, name: plan.name, field };
+  // Over or round the wicket for the over: round to angle in at the stumps and
+  // the body (the short-ball and stumps plans), now and then to change the angle.
+  const roundP = { newBall: 0.1, channel: 0.15, shortBall: 0.45, stumps: 0.35, death: 0.25 }[key] ?? 0.15;
+  const side = rng() < roundP ? 'round' : 'over';
+  return { key, name: plan.name, field, side };
 }
 
 export function newMemory() {
@@ -138,6 +154,8 @@ export function chooseDelivery(m, plan, memory, rng) {
   const actualLen = lengthOf(lenM);
   // The sky scales the swing and a cross-wind pushes the ball along (toward off
   // is away from the right-hander, like outswing); the pitch scales the seam.
+  // The over's angle, with the odd ball from the other side of the stumps.
+  const side = rng() < 0.05 ? (plan.side === 'round' ? 'over' : 'round') : plan.side ?? 'over';
   const swing = rng.range(...T.swing) * C.swing + C.wind.z * 0.012;
   const seam = rng.range(...T.seam) * C.seam;
   // Bowling into the wind costs a little pace, with it adds a little.
@@ -172,6 +190,7 @@ export function chooseDelivery(m, plan, memory, rng) {
     swing,
     seam,
     keep: C.keep,
+    side,
     surprise,
   };
 }

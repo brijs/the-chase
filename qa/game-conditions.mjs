@@ -48,8 +48,7 @@ check(after.saved?.sel?.sky === 'overcast' && after.saved.sel.pitch === 'green',
 await page.evaluate(() => window.__game.renderFrame());
 await shot('3-overcast-green');
 
-await page.keyboard.press('Enter');
-await page.evaluate(() => window.__game.advance(0.5));
+await page.evaluate(() => { window.__game.start(); window.__game.advance(0.5); }); // (Enter now tosses; start() goes straight to a chase)
 const cond = await page.evaluate(() => ({ ...window.__game.ctl.m.cond, chip: document.querySelector('#hud-cond').innerText }));
 check(cond.swing === 1.4 && cond.seam === 1.7 && cond.wind.x === 7, `the match plays in them (swing x${cond.swing}, seam x${cond.seam}, wind ${cond.wind.x} m/s behind the batter)`);
 check(/Overcast/.test(cond.chip) && /↓/.test(cond.chip), `corner chip: "${cond.chip.replace(/\n/g, ' / ')}"`);

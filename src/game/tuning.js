@@ -113,6 +113,7 @@ const OUT = [
   ['edgeBase', 'Edge: base', 0, 0.2],
   ['edgeFit', 'Edge: poor fit', 0, 1.5],
   ['edgeMove', 'Edge: movement (per m)', 0, 1.5],
+  ['angleAway', 'Angle across the batter → movement (per m)', 0, 0.5],
   ['edgeTiming', 'Edge: poor timing', 0, 1],
   ['defenceEdge', 'Edge: defence multiplier', 0, 1.5],
   ['loftEdge', 'Edge: lofted extra', 0, 0.3],

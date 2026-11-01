@@ -17,12 +17,13 @@ import { Plan } from './plan.js';
 import { createMatch, describeDelivery } from './match.js';
 import { SHOTS, shotFor } from './batting.js';
 import { simulateBatted, sampleAt } from './ballSim.js';
-import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, GATE_PT, GATE_OUT, GAME } from './rules.js';
+import { STRIKER, NON_STRIKER, NS_BACKED_UP, KEEPER_HOME, KEEPER_AT_STUMPS, GATE_PT, GATE_OUT, ROUND_DZ } from './rules.js';
 import { fieldPositions, FK } from './fielding.js';
 import { TYPES, DISGUISE } from './bowlerAI.js';
 import { lineOf } from './delivery.js';
 import { STUMPS_X } from './rules.js';
 import { SCALES } from './tuning.js';
+import { aiFieldersReview } from './umpire.js';
 
 /**
  * The Chase, live. Owns the game clock, the match, and a Plan per actor and for
@@ -39,7 +40,11 @@ const SCRIPT_REL = SCRIPT_R[0];
 const BAT_BASE = [STRIKER.x, STRIKER.z];
 const NS_BASE = [NON_STRIKER.x, NON_STRIKER.z];
 const NS_UP = [NS_BACKED_UP.x, NS_BACKED_UP.z];
+// In front of the bowler's stumps: where the non-striker crosses when the bowler changes sides.
+const NS_CROSS = [10.35, 0];
 const UMP_BASE = [12.75, -0.28];
+// Round the wicket the bowler runs in where the umpire stood: he steps across.
+const UMP_ROUND_Z = 0.42;
 const KEEP = [KEEPER_HOME.x, KEEPER_HOME.z];
 const KEEP_ST = [KEEPER_AT_STUMPS.x, KEEPER_AT_STUMPS.z];
 const FT_END = [5.4, 1.9];
@@ -131,6 +136,12 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   const plans = {};
   const homes = {}; // name -> { x, z, yaw, role?, slip? } where the actor will be once its plan settles
   const roles = { striker: 'batterA', nonStriker: 'nonStriker', spare: 'batterB' };
+  // The non-striker stands on the other side of the stumps from the bowler's
+  // run-up: the leg side when he bowls over the wicket, the off side round it.
+  // The running lanes mirror with him so the two batters never cross.
+  const nsSign = () => (ctl.bowlDz ? -1 : 1);
+  const nsBase = () => [NS_BASE[0], NS_BASE[1] * nsSign()];
+  const nsUp = () => [NS_UP[0], NS_UP[1] * nsSign()];
   const FIELDERS = ['slip1', 'slip2', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7'];
   const BATTERS = ['batterA', 'nonStriker', 'batterB'];
   const bails = ground.wickets[0].userData.bails;
@@ -175,7 +186,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       return (t) => {
         const tR = releaseNear(t);
         const pose = tR == null ? UMP_IDLE : poseAt(t, [[tR - 1.0, UMP_IDLE], [tR - 0.5, UMP_WATCH], [tR + 0.8, UMP_WATCH], [tR + 1.3, UMP_IDLE]]);
-        return { x: UMP_BASE[0], z: UMP_BASE[1], yaw: -PI / 2, pose: breathe(pose, t, 6, 3.3) };
+        return { x: s.x, z: s.z, yaw: -PI / 2, pose: breathe(pose, t, 6, 3.3) };
       };
     }
     if (name === 'keeper') {
@@ -285,6 +296,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     const ball = m.nextDelivery(ctl.forceNext ?? ctl.pickNext?.() ?? null);
     ctl.forceNext = null;
     const { del } = ball;
+    const spec0 = ball.spec;
     const tR = T0 + READY + RUN_UP;
     const cur = (ctl.cur = { ...ball, T0, tR, input: null, outcome: null, resolved: false, tBounce: tR + del.T1 });
     releases.push(tR);
@@ -292,18 +304,39 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     // A positive timing offset (a player who presses late) keeps the window open longer.
     cur.deadline = tR + del.contactTime('back') + m.diff.window.miss + Math.max(0, SCALES.offsetMs / 1000);
 
-    // Bowler: the authored delivery, retimed so its release is at tR.
-    plans.bowler.add(T0, tR + 1.3, (t) => bowlerAt(SCRIPT_REL + (t - tR)));
-    rest('bowler', tR + 1.3, { x: FT_END[0], z: FT_END[1], yaw: FT_YAW });
+    // Bowler: the authored delivery, retimed so its release is at tR. Round the
+    // wicket the whole run-up shifts across the stumps (a sidestep at the top of
+    // his mark when he changes sides); the umpire steps over to make room.
+    const dz = spec0.side === 'round' ? ROUND_DZ : 0;
+    const dz0 = ctl.bowlDz ?? 0;
+    ctl.bowlDz = dz;
+    cur.dz = dz;
+    plans.bowler.add(T0, tR + 1.3, (t) => {
+      const s = bowlerAt(SCRIPT_REL + (t - tR));
+      return { ...s, z: s.z + lerp(dz0, dz, smooth(win(t, T0, T0 + READY + 0.5))) };
+    });
+    rest('bowler', tR + 1.3, { x: FT_END[0], z: FT_END[1] + dz, yaw: FT_YAW });
+    const uz = dz ? UMP_ROUND_Z : UMP_BASE[1];
+    if (Math.abs(homes.umpire.z - uz) > 0.05) walkTo('umpire', T0, [UMP_BASE[0], uz], { yaw: -PI / 2, speed: 1.4, min: 1.2 });
     ballPlan.add(tR, tR + 3, (t) => ({ pos: del.pos(t - tR), flying: true }), 'delivery');
+    // The keeper moves to the line from the release (a hit replans him from the contact).
+    if (dist2(homeXZ('keeper'), KEEP) < 0.3 && del.tKeeper < 3) keeperTake(del, tR);
 
-    // Non-striker backs up.
+    // Non-striker: across to the other side of the stumps if the bowler has
+    // changed sides (in front of them, before the run-up), then he backs up.
     const ns = roles.nonStriker;
+    const nb = nsBase();
+    const nu = nsUp();
+    const nsNow = stateOf(ns, T0 - 1e-4);
+    if (nsNow && Math.sign(nsNow.z) !== Math.sign(nb[1]) && Math.abs(nsNow.z) > 0.5) {
+      const tMid = walkTo(ns, T0, NS_CROSS, { yaw: -PI / 2, speed: 1.7, min: 0.8, extra: { bat: BATS.WALK, ik: false } });
+      walkTo(ns, tMid, nb, { yaw: -PI / 2, speed: 1.7, min: 0.8, extra: { bat: BATS.WALK, ik: false } });
+    }
     plans[ns].add(tR - 0.5, tR + 0.45, (t) => {
-      const w = walkLeg(t, tR - 0.5, tR + 0.45, NS_BASE, NS_UP);
+      const w = walkLeg(t, tR - 0.5, tR + 0.45, nb, nu);
       return { ...w, yaw: -PI / 2, bat: BATS.WALK, ik: false, pose: { ...w.pose, shoulderR: [-0.35, 0, 0.08] } };
     });
-    rest(ns, tR + 0.45, { x: NS_UP[0], z: NS_UP[1], yaw: -PI / 2 });
+    rest(ns, tR + 0.45, { x: nu[0], z: nu[1], yaw: -PI / 2 });
 
     // A leave starts to show before the ball arrives; the deadline decides it.
     at(tR + del.contactTime('front') - 0.17, () => {
@@ -331,6 +364,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       line: spec.aimedLine ?? lineOf(aimLine),
       t0: T0 + 0.25,
       t1: tR - pv.hideBefore,
+      side: spec.side ?? 'over',
     };
     hud.preview(cur.preview, tR);
     hud.ball({ m, spec, tR, del, diff: m.diff });
@@ -396,7 +430,9 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     // Given out, and the batter may review it: everything after the umpire's
     // finger waits for the decision (no walk-off, no score, no next ball).
     const offer = m.drs && !ctl.noReviews && m.reviewable(o) && m.reviewsLeft > 0;
-    cur.holdWicket = offer;
+    // Given not out on an appeal: the fielding side may review it.
+    const aiReview = !offer && m.drs && !ctl.noReviews && m.aiReviewsLeft > 0 && aiFieldersReview(o, hash(ctl.seed * 7.31 + m.log.length * 1.7 + 0.4));
+    cur.holdWicket = offer || aiReview;
 
     if (input) scheduleShot(s, input, o, tR + input.pressT, cur);
     ballPlan.cutFrom(tR);
@@ -427,7 +463,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
 
     // Bowler: reaction at the end of his follow-through, then straight back to
     // his mark; the ball is returned to him on the way (aimed at his hand then).
-    const spot = { x: FT_END[0], z: FT_END[1], yaw: FT_YAW };
+    const spot = { x: FT_END[0], z: FT_END[1] + (cur.dz ?? 0), yaw: FT_YAW };
     const stand = (t, pose, lift = 0) => ({ x: spot.x, z: spot.z, yaw: spot.yaw, pose, lift });
     const tB0 = Math.max(tR + 1.3, (r.tOut ?? tCall) + 0.1);
     let tReact = tR + 1.6;
@@ -438,9 +474,20 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       plans.bowler.add(tB0, tB0 + 1.8, (t) => stand(t, poseAt(t, [[tB0, STAND], [tB0 + 0.3, HANDS_ON_HEAD], [tB0 + 1.4, HANDS_ON_HEAD], [tB0 + 1.8, STAND]])));
       tReact = tB0 + 1.8;
     }
-    const tMark = walkTo('bowler', tReact, [MARK.x, MARK.z], { yaw: BOWL_YAW_RUN, speed: 4.8, min: 2.4, easeK: 0.5 });
+    const tMark = walkTo('bowler', tReact, [MARK.x, MARK.z + (cur.dz ?? 0)], { yaw: BOWL_YAW_RUN, speed: 4.8, min: 2.4, easeK: 0.5 });
 
     const ctx = { r, tCall, tReveal, tMark, s, tNow };
+    if (aiReview) {
+      // A moment's huddle, then the captain makes the T.
+      const tAsk = (r.tOut ?? tCall) + 1.8;
+      cur.review = { o, ctx, tOffer: tAsk, state: 'waiting', by: 'ai' };
+      at(tAsk, (t) => {
+        cur.review.state = 'offered';
+        ctl.phase = 'drs';
+        onEvent('review-ai', { o, cur, reviewsLeft: m.aiReviewsLeft, tOffer: t });
+      });
+      return;
+    }
     if (offer) {
       // The batter has a few seconds to ask for it once the finger is up.
       const tOffer = (r.tOut ?? tCall) + 1.0 + 0.7;
@@ -466,13 +513,17 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     cur.review.state = 'settled';
     cur.review.result = result;
     let o = cur.review.o;
-    if (result !== 'accept' && result.overturned) o = ctl.m.overturn(o);
+    const byAi = cur.review.by === 'ai';
+    if (result !== 'accept' && result.overturned) o = byAi ? ctl.m.overturnToOut(o) : ctl.m.overturn(o);
     cur.outcome = o;
     const tNow = ctl.t;
     const ctx = { ...cur.review.ctx, tNow, late: true };
+    // Given out on the fielders' review: the finger goes up now.
+    if (byAi && o.out) umpireSignal(UMP_OUT, tNow + 0.2, 1.8);
     // The tail of the ball, from now: the batter goes (or stays), the score, the next ball.
+    // (Off the bat the batters' feet were already planned with the hit.)
     if (o.out && !ctl.nets) wicketFall(ctx.s, tNow + 0.3, cur);
-    else runBatters(0, tNow - 0.6, cur);
+    else if (o.kind !== 'hit') runBatters(0, tNow - 0.6, cur);
     ctx.tReveal = Math.max(ctx.tReveal, tNow);
     ctl.phase = 'live';
     settle(o, cur, ctx);
@@ -492,8 +543,9 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       ballPlan.add(tu, tu + 0.6, () => hold('umpire', 'L'));
       tHas = tu + 1.35;
       const bAt = xz(stateOf('bowler', tHas));
-      const uy = yawTo(UMP_BASE, bAt);
-      plans.umpire.add(tu - 0.1, tu + 1.2, (t) => ({ x: UMP_BASE[0], z: UMP_BASE[1], yaw: lerpAngle(-PI / 2, uy, smooth(win(t, tu - 0.1, tu + 0.2))), pose: poseAt(t, [[tu - 0.1, UMP_IDLE], [tu + 0.35, THROW_WIND], [tu + 0.6, THROW_REL, 'lin'], [tu + 1.2, UMP_IDLE]]) }));
+      const U = homeXZ('umpire');
+      const uy = yawTo(U, bAt);
+      plans.umpire.add(tu - 0.1, tu + 1.2, (t) => ({ x: U[0], z: U[1], yaw: lerpAngle(-PI / 2, uy, smooth(win(t, tu - 0.1, tu + 0.2))), pose: poseAt(t, [[tu - 0.1, UMP_IDLE], [tu + 0.35, THROW_WIND], [tu + 0.6, THROW_REL, 'lin'], [tu + 1.2, UMP_IDLE]]) }));
       bowlerCatch(tHas);
       scheduleThrow('umpire', 'L', tu + 0.6, 'bowler', 'L', tHas);
     } else {
@@ -505,7 +557,8 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       bowlerCatch(tHas);
       ballPlan.add(tDead, tThrowBack, () => hold(holder, side));
       scheduleThrow(holder, 'L', tThrowBack, 'bowler', 'L', tHas);
-      if (holder === 'keeper' && dist2(homeXZ('keeper'), KEEP) > 0.3) walkTo('keeper', tThrowBack + 0.6, KEEP, { yaw: YAW_FIELD, speed: 3.0, min: 1.2 });
+      // (From wherever the throw found him: a take down the leg side leaves him well across.)
+      if (holder === 'keeper') walkTo('keeper', tThrowBack + 0.5, KEEP, { yaw: YAW_FIELD, speed: 3.0, min: 1.2 });
       else if (holder !== 'keeper') goHome(holder, tThrowBack + 0.6);
     }
     ballPlan.rest(tHas, () => hold('bowler', 'L'));
@@ -517,7 +570,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     hud.result({ m, o, cur, t: Math.max(tCall + 0.3, tReveal), describe: describeDelivery(o.spec), reviewed: cur.review?.result });
     at(Math.max(tCall + 0.6, tReveal + 0.3), (t) => {
       if (ctl.nets) board.show(['NETS', `${m.log.length} BALLS`], boardVerdict(o), t);
-      else board.show([`TARGET ${m.target}   ${m.overText()} OV`, `${m.runs}-${m.wkts}`], boardVerdict(o), t);
+      else board.show([m.target == null ? `1ST INNINGS   ${m.overText()} OV` : `TARGET ${m.target}   ${m.overText()} OV`, `${m.runs}-${m.wkts}`], boardVerdict(o), t);
       hud.score(m, t);
     });
     // Who was on strike, and (after a wicket) who came in: for the scorebook.
@@ -529,8 +582,8 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       else sfx(Math.max(tCall + 1.5, tNow + 1), 'applause', { size: 0.4 });
       at(Math.max(tCall + 2.6, tDead + 1.2, late ? tNow + 2.5 : 0), (t) => {
         ctl.phase = 'result';
-        hud.final(m, t);
-        board.show([`TARGET ${m.target}`, `${m.runs}-${m.wkts}`], m.result === 'won' ? 'CHASE WON' : m.result === 'tied' ? 'TIED' : 'CHASE LOST', t);
+        hud.final(m, t, ctl.finalInfo ?? {});
+        board.show([m.target == null ? `${m.overs} OVERS` : `TARGET ${m.target}`, `${m.runs}-${m.wkts}`], m.result === 'innings' ? 'INNINGS' : m.result === 'won' ? 'CHASE WON' : m.result === 'tied' ? 'TIED' : 'CHASE LOST', t);
         onEvent('result', { m });
       });
       return;
@@ -932,6 +985,32 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   }
 
   // ---------------------------------------------------------------- no contact
+  /**
+   * The keeper reads the line from the hand and moves across to take it: from
+   * the release, not from when the outcome is known (a ball angled down the leg
+   * side ends up well wide of him). Returns the time of the take.
+   */
+  function keeperTake(del, tR) {
+    const tK = tR + del.tKeeper;
+    const bp = del.atKeeper;
+    const y = bp.y;
+    const takePose = y > 1.35 ? KEEPER_HIGH : y < 0.45 ? KEEPER_SQUAT : KEEPER_UP;
+    const [ox, oz, oy] = handOffset('keeper', { x: 0, z: 0, yaw: YAW_FIELD, pose: takePose }, 'both');
+    const kx = bp.x - ox;
+    const kz = bp.z - oz;
+    const lift = clamp(y - oy, 0, 0.5);
+    // Back to his spot at a walk, however far the take took him.
+    const tBack = tK + 0.8 + Math.max(0.4, dist2([kx, kz], KEEP) / 2.2);
+    plans.keeper.add(tR - 1.0, tBack, (t) => ({
+      x: scalarAt(t, [[tR + 0.15, KEEP[0]], [tK - 0.05, kx], [tK + 0.8, kx], [tBack, KEEP[0]]]),
+      z: scalarAt(t, [[tR + 0.15, KEEP[1]], [tK - 0.05, kz], [tK + 0.8, kz], [tBack, KEEP[1]]]),
+      yaw: YAW_FIELD,
+      pose: poseAt(t, [[tR - 1.0, KEEPER_RELAXED], [tR - 0.6, KEEPER_SQUAT], [tR + 0.15, KEEPER_SQUAT], [tK - 0.12, takePose], [tK + 0.6, takePose], [tBack, KEEPER_RELAXED]]),
+      lift: lift * Math.sin(PI * win(t, tK - 0.3, tK + 0.3)),
+    }));
+    return tK;
+  }
+
   function scheduleNoContact(o, cur) {
     const { del, tR } = cur;
     const s = roles.striker;
@@ -953,21 +1032,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       return collect(sim, tH, cur, s);
     }
     // Through to the keeper.
-    const tK = tR + del.tKeeper;
-    const bp = del.atKeeper;
-    const y = bp.y;
-    const takePose = y > 1.35 ? KEEPER_HIGH : y < 0.45 ? KEEPER_SQUAT : KEEPER_UP;
-    const [ox, oz, oy] = handOffset('keeper', { x: 0, z: 0, yaw: YAW_FIELD, pose: takePose }, 'both');
-    const kx = bp.x - ox;
-    const kz = bp.z - oz;
-    const lift = clamp(y - oy, 0, 0.5);
-    plans.keeper.add(tR - 1.0, tK + 1.2, (t) => ({
-      x: scalarAt(t, [[tR + 0.15, KEEP[0]], [tK - 0.05, kx], [tK + 0.8, kx], [tK + 1.2, KEEP[0]]]),
-      z: scalarAt(t, [[tR + 0.15, KEEP[1]], [tK - 0.05, kz], [tK + 0.8, kz], [tK + 1.2, KEEP[1]]]),
-      yaw: YAW_FIELD,
-      pose: poseAt(t, [[tR - 1.0, KEEPER_RELAXED], [tR - 0.6, KEEPER_SQUAT], [tR + 0.15, KEEPER_SQUAT], [tK - 0.12, takePose], [tK + 0.6, takePose], [tK + 1.2, KEEPER_RELAXED]]),
-      lift: lift * Math.sin(PI * win(t, tK - 0.3, tK + 0.3)),
-    }));
+    const tK = keeperTake(del, tR);
     ballPlan.add(tR, tK, (t) => ({ pos: del.pos(t - tR), flying: true }), 'delivery');
     ballPlan.rest(tK, () => hold('keeper', 'both'));
     if (cur.holdWicket) {
@@ -1005,22 +1070,24 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   function runBatters(n, tc, cur) {
     const S = roles.striker;
     const N = roles.nonStriker;
+    const nb = nsBase();
+    const nu = nsUp();
     const t0 = tc + 0.2;
     if (n === 0) {
       const tb = Math.max(t0 + 0.6, cur.tR + 1.4);
       plans[N].add(tb, tb + 1.6, (t) => {
-        const w = walkLeg(t, tb, tb + 1.6, NS_UP, NS_BASE);
+        const w = walkLeg(t, tb, tb + 1.6, nu, nb);
         const turn = smooth(win(t, tb + 1.2, tb + 1.6));
         return { ...w, yaw: lerpAngle(PI / 2, -PI / 2, turn), bat: BATS.WALK, ik: false, pose: { ...w.pose, shoulderR: [-0.3, 0, 0.08] } };
       });
-      rest(N, tb + 1.6, { x: NS_BASE[0], z: NS_BASE[1], yaw: -PI / 2 });
+      rest(N, tb + 1.6, { x: nb[0], z: nb[1], yaw: -PI / 2 });
       cur.battersReady = Math.max(cur.battersReady ?? 0, tb + 1.6);
       return t0;
     }
     const endX = (k, fromS) => ((k % 2 === 0) === fromS ? END_S : END_N);
     const runOne = (name, fromS) => {
-      const lane = LANE[name];
-      const start = fromS ? [BAT_BASE[0] + 0.2, BAT_BASE[1]] : NS_UP;
+      const lane = LANE[name] * nsSign();
+      const start = fromS ? [BAT_BASE[0] + 0.2, BAT_BASE[1]] : nsUp();
       for (let k = 0; k < n; k++) {
         const a = k === 0 ? start : [endX(k, fromS), lane];
         const b = [endX(k + 1, fromS), lane];
@@ -1032,7 +1099,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       }
       const ex = endX(n, fromS);
       const atS = ex === END_S;
-      const to = atS ? BAT_BASE : NS_BASE;
+      const to = atS ? BAT_BASE : nsBase();
       const tA = t0 + n * FK.runTime;
       const from = [ex, lane];
       const toYaw = atS ? 0 : -PI / 2;
@@ -1081,22 +1148,25 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     Object.assign(roles, { striker: inc, spare: out });
     // The non-striker walks back to his crease.
     const N = roles.nonStriker;
+    const nb = nsBase();
+    const nu = nsUp();
     if (homes[N].x !== NS_BASE[0]) {
       const tb = Math.max(cur.tR + 1.4, ctl.t); // (later, after a review)
       plans[N].add(tb, tb + 1.6, (t) => {
-        const w = walkLeg(t, tb, tb + 1.6, NS_UP, NS_BASE);
+        const w = walkLeg(t, tb, tb + 1.6, nu, nb);
         return { ...w, yaw: lerpAngle(PI / 2, -PI / 2, smooth(win(t, tb + 1.2, tb + 1.6))), bat: BATS.WALK, ik: false };
       });
-      rest(N, tb + 1.6, { x: NS_BASE[0], z: NS_BASE[1], yaw: -PI / 2 });
+      rest(N, tb + 1.6, { x: nb[0], z: nb[1], yaw: -PI / 2 });
     }
     cur.battersReady = Math.max(cur.battersReady ?? 0, g + 2.6);
   }
 
   function umpireSignal(pose, t0, dur, wave = false) {
+    const U = homeXZ('umpire');
     plans.umpire.add(t0, t0 + dur + 0.5, (t) => {
       let p = poseAt(t, [[t0, UMP_IDLE], [t0 + 0.3, pose], [t0 + dur, pose], [t0 + dur + 0.5, UMP_IDLE]]);
       if (wave && t > t0 + 0.3 && t < t0 + dur) p = { ...p, shoulderL: [p.shoulderL[0], 0, -0.2 + 0.55 * Math.sin((t - t0) * 9)] };
-      return { x: UMP_BASE[0], z: UMP_BASE[1], yaw: lerpAngle(-PI / 2, PI / 2 + 0.4, smooth(win(t, t0, t0 + 0.3)) * (1 - smooth(win(t, t0 + dur, t0 + dur + 0.5)))), pose: p };
+      return { x: U[0], z: U[1], yaw: lerpAngle(-PI / 2, PI / 2 + 0.4, smooth(win(t, t0, t0 + 0.3)) * (1 - smooth(win(t, t0 + dur, t0 + dur + 0.5)))), pose: p };
     });
   }
 
@@ -1228,12 +1298,17 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   }
 
   // ---------------------------------------------------------------- lifecycle
-  /** opts.nets: practice, no target or result, the field stays at opts.field. opts.conditions: the day (conditions.js). opts.umpire: { bad, drs }. */
+  /**
+   * opts.nets: practice, no target or result, the field stays at opts.field.
+   * opts.conditions: the day (conditions.js). opts.umpire: { bad, drs }.
+   * opts.format: 5 | 10 | 20 overs. opts.target: runs to win (null: bat first;
+   * left out: the AI's own target).
+   */
   function startMatch(difficulty, seed, opts = {}) {
     ctl.difficulty = difficulty;
     ctl.seed = seed;
     ctl.nets = !!opts.nets;
-    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets, conditions: opts.conditions, umpire: opts.umpire });
+    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets, conditions: opts.conditions, umpire: opts.umpire, format: opts.format, target: opts.target, superOver: !!opts.superOver });
     ctl.events = [];
     ctl.cur = null;
     ctl.ff = false;
@@ -1245,7 +1320,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     if (ctl.nets) ctl.m.field = fieldPositions(opts.field ?? 'balanced');
     setField(ctl.m.field, ctl.t - 1, false);
     if (ctl.nets) board.show(['NETS', 'CALIBRATION'], 'PLAY YOUR SHOTS', ctl.t);
-    else board.show([`TARGET ${ctl.m.target}`, '0-0'], `${GAME.overs} OVERS`, ctl.t);
+    else board.show([ctl.m.target == null ? (ctl.m.superOver ? 'SUPER OVER' : '1ST INNINGS') : `TARGET ${ctl.m.target}`, '0-0'], ctl.m.superOver ? '1 OVER  2 WKTS' : `${ctl.m.overs} OVERS`, ctl.t);
     hud.score(ctl.m, ctl.t);
     if (!ctl.nets) hud.over(ctl.m, plan, ctl.t);
     ctl.phase = 'live';
@@ -1254,12 +1329,12 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     onEvent('start', { m: ctl.m });
   }
   /** Before the first game: the XI in the attacking field, standing by. */
-  function preview(difficulty, seed) {
-    ctl.m = createMatch({ difficulty, seed });
+  function preview(difficulty, seed, format = 5) {
+    ctl.m = createMatch({ difficulty, seed, format });
     ctl.cur = null;
     initPlans(ctl.t);
     setField(fieldPositions('attack'), ctl.t - 1, false);
-    board.show(['THE CHASE', `TARGET ${ctl.m.target}`], 'PRESS ENTER', ctl.t);
+    board.show(['THE CHASE', `${ctl.m.overs} OVERS`], 'PRESS ENTER', ctl.t);
   }
 
   /** Advance game time by dt real seconds; fast-forward runs dead time at 4x. */

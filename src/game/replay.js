@@ -23,8 +23,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  *
  * No motion trail in slow motion: the ball is sharp frame by frame.
  *
+ * Review (V) runs the third umpire's views on the ball (ball tracking,
+ * UltraEdge) as an analysis: not a challenge, nothing changes.
+ *
  * Keys in replay: Space play/pause · ← → step (hold to scrub) · [ ] speed ·
- * S slow motion on/off · C view · Home restart · R or Esc back to the game.
+ * S slow motion on/off · C view · V review · Home restart · R or Esc back to the game.
  * Controller: Confirm play/pause, Back exit, direction left/right scrubs.
  */
 const CSS = `
@@ -47,7 +50,7 @@ const VIEWS = [['ball', 'Ball cam'], ['side', 'Side-on'], ['broadcast', 'Broadca
 const SPEEDS = [0.1, 0.25, 0.5, 1];
 const STRIKER = new THREE.Vector3(-7.75, 0, -0.32);
 
-export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
+export function createReplay({ ctl, camera, canvas, root, aspect, pad, onReview = null }) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -94,7 +97,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
     const f = o.fielding;
     const tTake = tC != null && f ? tC + (f.type === 'boundary' ? Math.min(o.sim?.tRope ?? f.t, f.t) : f.t) : c.tR + (c.del.tKeeper ?? 0.9);
     const end = tC != null && f ? tC + Math.min(5.5, Math.max(2.4, (f.type === 'boundary' ? Math.min(o.sim.tStop, 4) : f.t) + 1.4)) : c.tR + 2.6;
-    last = { tR: c.tR, tC, tTake, end, call: o.call, contact: o.contactPos ? new THREE.Vector3(o.contactPos.x, o.contactPos.y, o.contactPos.z) : null };
+    last = { o, cur: c, tR: c.tR, tC, tTake, end, call: o.call, contact: o.contactPos ? new THREE.Vector3(o.contactPos.x, o.contactPos.y, o.contactPos.z) : null };
   }
   const available = () => !!last && ctl.t - last.end < 25 && ctl.t > last.tR + 0.8;
 
@@ -114,6 +117,26 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
     if (R.view === 'free') R.view = 'ball';
     draw();
     return true;
+  }
+  /** The third umpire's views on this ball; the replay waits underneath. */
+  function review() {
+    if (!R.active || R.reviewing || !onReview) return;
+    R.playing = false;
+    R.reviewing = true;
+    bar.classList.remove('on');
+    badge.classList.remove('on');
+    const ok = onReview(last.o, last.cur, () => {
+      R.reviewing = false;
+      if (!R.active) return;
+      bar.classList.add('on');
+      badge.classList.add('on');
+      draw();
+    });
+    if (!ok) {
+      R.reviewing = false;
+      bar.classList.add('on');
+      badge.classList.add('on');
+    }
   }
   function stop() {
     if (!R.active) return;
@@ -143,6 +166,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
         ${VIEWS.map(([v, n]) => `<button data-view="${v}" class="${R.view === v ? 'on' : ''}">${n}</button>`).join('')}
         ${R.view === 'free' ? `<button data-a="follow" class="${R.follow ? 'on' : ''}" title="Keep the ball centred">Follow ball</button>` : ''}
         <span style="flex:1"></span>
+        ${onReview ? '<button data-a="review" title="Ball tracking and UltraEdge on this ball (V): an analysis, not a challenge">🎯 Review (V)</button>' : ''}
         <button data-a="exit" title="Back to the game (R / Esc)">✕ Exit replay</button>
       </div>`;
     refresh();
@@ -172,6 +196,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
     else if (b.dataset.a === 'fwd') step(1);
     else if (b.dataset.a === 'slowmo') R.slowmo = !R.slowmo;
     else if (b.dataset.a === 'exit') return stop();
+    else if (b.dataset.a === 'review') return review();
     draw();
   });
   bar.addEventListener('input', (e) => {
@@ -189,7 +214,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (!R.active || e.target instanceof HTMLInputElement) return;
+      if (!R.active || R.reviewing || e.target instanceof HTMLInputElement) return;
       const k = e.key;
       let used = true;
       if (k === ' ') R.playing = !R.playing;
@@ -199,6 +224,7 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
       else if (k === 's' || k === 'S') R.slowmo = !R.slowmo;
       else if (k === 'c' || k === 'C') cycleView();
       else if (k === 'Home') { R.t = R.t0; R.playing = true; }
+      else if (k === 'v' || k === 'V') return void (e.preventDefault(), e.stopImmediatePropagation(), review());
       else if (k === 'r' || k === 'R' || k === 'Escape') stop();
       else used = false;
       if (used) {
@@ -356,12 +382,14 @@ export function createReplay({ ctl, camera, canvas, root, aspect, pad }) {
     available,
     rate,
     state: R,
+    review,
     get active() {
       return R.active;
     },
     /** Controller in replay: confirm = play/pause, back = exit. */
     key(k) {
       if (!R.active) return false;
+      if (k === 'review') return review(), true;
       if (k === 'enter' || k === 'skip') R.playing = !R.playing;
       else if (k === 'pause' || k === 'replay') stop();
       else if (k === 'camera') cycleView();

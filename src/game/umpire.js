@@ -71,6 +71,35 @@ export function trackLbw(del, foot, offered) {
   };
 }
 
+/**
+ * Ball tracking for any ball (the replay's review): where it pitched, where it
+ * stopped being a free ball (pad, bat, or the stumps' plane) and whether its
+ * path would have gone on to hit the stumps. Pad balls get the full LBW track.
+ */
+export function trackAny(del, o) {
+  if (o.pad) {
+    const t = trackLbw(del, o.foot ?? 'stance', o.kind !== 'leave');
+    if (t) return { ...t, end: 'pad' };
+  }
+  const tEnd = o.kind === 'hit' || o.kind === 'playedOn' ? (o.tContact ?? o.shot?.tContact) : del.tStumps;
+  const bounced = del.T1 < tEnd;
+  const bz = del.bounce.z;
+  const at = del.atStumps;
+  const wy = realY(at);
+  return {
+    pitching: !bounced ? 'full' : bz < -ZONE_HALF ? 'outsideLeg' : bz > ZONE_HALF ? 'outsideOff' : 'inline',
+    impact: null,
+    wickets: Math.abs(at.z) <= ZONE_HALF && wy <= ZONE_TOP ? 'hitting' : Math.abs(at.z) <= ZONE_HALF + R && wy <= ZONE_TOP + R ? 'umpiresCall' : 'missing',
+    tPad: tEnd,
+    pad: del.pos(tEnd),
+    tBounce: bounced ? del.T1 : null,
+    bounce: bounced ? del.bounce : null,
+    tStumps: del.tStumps,
+    atStumps: { x: STUMPS_X, y: wy, z: at.z },
+    end: o.kind === 'hit' || o.kind === 'playedOn' ? 'bat' : 'stumps',
+  };
+}
+
 /** What ball tracking says: 'out', 'notOut' or 'umpiresCall' (the on-field call stands). */
 export function lbwVerdict(track) {
   if (track.pitching === 'outsideLeg' || track.impact === 'outside' || track.wickets === 'missing') return 'notOut';
@@ -141,10 +170,32 @@ export function snickEvents(o, del) {
   const ev = [];
   const sh = o.shot;
   const lbw = o.umpire?.kind === 'lbw' ? o.umpire : null;
-  if (o.kind === 'hit' && sh?.edge) ev.push({ t: sh.tContact, kind: 'bat' });
+  // Any touch of the bat: a feather for an edge, the full crack for a middled one.
+  if ((o.kind === 'hit' || o.kind === 'playedOn') && sh) ev.push({ t: sh.tContact, kind: 'bat', big: !sh.edge });
   if (lbw) {
     if (lbw.batFirst) ev.push({ t: lbw.track.tPad - 0.012, kind: 'bat' });
     ev.push({ t: lbw.track.tPad, kind: 'pad' });
   }
   return ev;
+}
+
+/**
+ * The AI captain in the field: reviews a not-out when it is sure enough. A
+ * missed edge the keeper heard, a plumb one missed: usually. Umpire's call:
+ * sometimes. A near miss: now and then, a punt. r is 0..1.
+ */
+export function aiFieldersReview(o, r) {
+  const u = o.umpire;
+  if (!u || u.given || o.out) return false;
+  if (u.kind === 'caught') return r < 0.75;
+  if (u.truth === 'out') return r < 0.8;
+  if (u.truth === 'umpiresCall') return r < 0.45;
+  return r < 0.12 * Math.max(0, 1 - u.track.miss / 0.22);
+}
+
+/** The AI batter given out: reviews when he knows he wasn't (outside leg, no edge), seldom when plumb. */
+export function aiBatterReviews(o, r) {
+  const u = o.umpire;
+  if (!u || !u.given) return false;
+  return r < (u.truth === 'notOut' ? 0.75 : u.truth === 'umpiresCall' ? 0.4 : 0.06);
 }

@@ -1,4 +1,4 @@
-import { STRIKER, OVAL, KEEPER_HOME, KEEPER_AT_STUMPS, ellipseK, rayToEllipse } from './rules.js';
+import { STRIKER, OVAL, KEEPER_HOME, KEEPER_AT_STUMPS, ellipseK, rayToEllipse, insideRing } from './rules.js';
 
 /**
  * Field settings and who gets to the ball.
@@ -46,16 +46,35 @@ export const FIELD_PRESETS = {
   ],
 };
 
-export function fieldPositions(preset) {
-  return FIELD_PRESETS[preset].map(([name, azDeg, d], i) => {
+/** Deep fielders brought up to save one when the restrictions bite, first to last, and what they become. */
+const BRING_IN = [['Deep cover', 'Cover'], ['Deep point', 'Point'], ['Deep midwicket', 'Midwicket'], ['Long-on', 'Mid-on'], ['Long-off', 'Mid-off'], ['Deep square', 'Square leg'], ['Third man', 'Short third'], ['Fine leg', 'Short fine leg']];
+
+/**
+ * The field for a preset. opts.maxOut: how many may stand outside the circle
+ * (the fielding restrictions); the rest of the deep ones come up to save one,
+ * in BRING_IN order. Ring fielders always stand inside it. Each fielder
+ * carries `out` (outside the circle).
+ */
+export function fieldPositions(preset, { maxOut = Infinity } = {}) {
+  const deep = FIELD_PRESETS[preset].filter(([, , d]) => d === 'deep').map(([n]) => n);
+  const bring = new Set(BRING_IN.map(([n]) => n).filter((n) => deep.includes(n)).slice(0, Math.max(0, deep.length - maxOut)));
+  return FIELD_PRESETS[preset].map(([name0, azDeg, d0], i) => {
     const az = (azDeg * Math.PI) / 180;
     const maxD = rayToEllipse(STRIKER.x, STRIKER.z, az, OVAL.rope) - 1.6;
-    const dist = d === 'deep' ? maxD : Math.min(d, maxD);
+    // Just inside the circle along this line.
+    const ringD = rayToEllipse(STRIKER.x, STRIKER.z, az, OVAL.ring) - 0.8;
+    let name = name0;
+    let d = d0;
+    if (bring.has(name0)) {
+      name = BRING_IN.find(([n]) => n === name0)[1];
+      d = Math.min(14, ringD);
+    }
+    const dist = d === 'deep' ? maxD : Math.min(d, maxD, ringD);
     const x = STRIKER.x + Math.cos(az) * dist;
     const z = STRIKER.z + Math.sin(az) * dist;
     // Facing the batter.
     const yaw = Math.atan2(STRIKER.x - x, STRIKER.z - z);
-    return { id: FIELDER_IDS[i], name, x, z, yaw };
+    return { id: FIELDER_IDS[i], name, x, z, yaw, out: !insideRing(x, z) };
   });
 }
 

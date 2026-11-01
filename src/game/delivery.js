@@ -74,7 +74,12 @@ export function buildDelivery(spec, paceK = 0.8, rel = RELEASE_PT) {
   const v = (spec.kph / 3.6) * paceK;
   const xb = STUMPS_X + spec.lenM;
   const zs = spec.lineZ;
-  const zb = zs - spec.seam;
+  // Where it pitches: on the straight line from the hand to where it is aimed
+  // (the line at the stumps less the seam), so the angle from the bowler's side
+  // of the stumps carries through the bounce: over the wicket it angles in,
+  // round the wicket across. Then the seam moves it on to the line.
+  const aimZ = zs - spec.seam;
+  const zb = aimZ - (aimZ - rel.z) * (xb - STUMPS_X) / (rel.x - STUMPS_X);
   const bounce = { x: xb, y: BALL_R, z: zb };
 
   // Pre-bounce: horizontal speed ~ v, lateral swing as a constant acceleration
@@ -163,6 +168,12 @@ export function buildDelivery(spec, paceK = 0.8, rel = RELEASE_PT) {
     contactPos: (foot) => pos(timeAtX(CONTACT_X[foot])),
     /** Lateral movement away from the right-hander (+) or into him (-). */
     movement: spec.swing + spec.seam,
+    /**
+     * The angle: how far the straight line from the hand to the stumps runs
+     * across (+, toward off: round the wicket) or in (-, over the wicket), m.
+     */
+    angle: zs - spec.swing - spec.seam - rel.z,
+    side: spec.side ?? 'over',
     pitchedOutsideLeg: zb < -STUMP_HALF,
     isWide: zs > 0.9 || zs < -0.72 || spec.hStumps > 2.25,
   };

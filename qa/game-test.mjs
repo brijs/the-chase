@@ -27,7 +27,11 @@ async function open(q, vp = { width: 1280, height: 800 }) {
 // 1 + 2. Real time, real keys.
 {
   const page = await open('seed=11');
-  await page.keyboard.press('Enter');
+  // Enter tosses; Enter again through the call, the choice (or theirs) and, if they bat first, their innings.
+  for (let i = 0; i < 12 && !(await page.evaluate(() => window.__game.ctl.phase === 'live')); i++) {
+    await page.keyboard.press(await page.evaluate(() => window.__game.flow.stage === 'innings') ? ' ' : 'Enter');
+    await page.waitForTimeout(await page.evaluate(() => window.__game.flow.stage === 'flip') ? 1900 : 250);
+  }
   await page.waitForFunction(() => window.__game.ctl.phase === 'live');
   await page.waitForFunction(() => { const c = window.__game.ctl; return c.cur && c.t > c.cur.tR + 0.05; }, null, { timeout: 15000 });
   const fps = page.evaluate(() => new Promise((res) => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else res(n / 2); }; requestAnimationFrame(f); }));

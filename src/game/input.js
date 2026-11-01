@@ -5,6 +5,7 @@
  *
  * onShot(dirKey, lofted, eventTimeMs, special) — dirKey is '', 'D', 'DL', 'L', 'UL', 'U', 'UR', 'R', 'DR'
  * onKey(name, event) — enter, pause, camera, skip, help, guide, mute, tune, nets, 1-3, 7-9
+ * onArrow(dir) — each arrow as it goes down ('U' | 'D' | 'L' | 'R'), for the cards
  */
 const ARROWS = { ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R' };
 
@@ -14,7 +15,7 @@ export function dirKeyOf(held) {
   return v + h;
 }
 
-export function createInput({ onShot, onKey }) {
+export function createInput({ onShot, onKey, onArrow }) {
   const held = new Set();
   let pending = null;
   const fire = () => {
@@ -28,6 +29,7 @@ export function createInput({ onShot, onKey }) {
     if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey) return;
     if (ARROWS[e.key]) {
       e.preventDefault();
+      if (!e.repeat) onArrow?.(ARROWS[e.key]);
       held.add(ARROWS[e.key]);
       return;
     }

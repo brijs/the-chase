@@ -83,6 +83,17 @@ export function buildGameGround(scene, mats) {
   rope.castShadow = true;
   g.add(rope);
 
+  // The fielding circle: white discs round the ring, as on a real ground.
+  const [ra, rb] = OVAL.ring;
+  const ringPer = Math.PI * (3 * (ra + rb) - Math.sqrt((3 * ra + rb) * (ra + 3 * rb)));
+  const nDots = Math.round(ringPer / 1.5);
+  const dots = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.15, 0.025, 12), mats.boardText, nDots);
+  const m4 = new THREE.Matrix4();
+  for (let k = 0; k < nDots; k++) dots.setMatrixAt(k, m4.makeTranslation(ellPt((k / nDots) * Math.PI * 2, OVAL.ring, 0.012)));
+  dots.receiveShadow = true;
+  dots.name = 'fielding-circle';
+  g.add(dots);
+
   // Boards round the ellipse, sponsor bars facing in; a gap for the gate.
   const colours = [mats.boardBlue, mats.boardNavy, mats.boardYellow, mats.boardOrange];
   const [ba, bb] = OVAL.boards;

@@ -9,6 +9,12 @@ import { mulberry32 } from '../core/geometry.js';
  * Shot azimuth `az` is measured from +X toward +Z (off side positive).
  */
 export const GAME = { overs: 5, wickets: 5, ballsPerOver: 6 };
+/** Match lengths: overs and wickets (the short game keeps five wickets). */
+export const FORMATS = {
+  5: { overs: 5, wickets: 5, label: '5 overs' },
+  10: { overs: 10, wickets: 10, label: '10 overs' },
+  20: { overs: 20, wickets: 10, label: '20 overs (T20)' },
+};
 
 /** Real ball radius for the laws (the drawn ball is 2.5x). */
 export const BALL_REAL_R = 0.036;
@@ -19,6 +25,13 @@ export const NON_STRIKER = { x: 11.0, z: -1.42 };
 export const NS_BACKED_UP = { x: 9.05, z: -1.45 };
 /** The bowler's release point, measured from the rig at RELEASE (stage.points.rel). */
 export const RELEASE_PT = { x: 9.697, y: 1.782, z: 0.453 };
+/**
+ * Round the wicket: the right-armer runs in on the other side of the stumps,
+ * so the whole run-up shifts across (his arm, now away from the stumps, lets
+ * go about 0.8 m on the leg side). The delivery is solved from there.
+ */
+export const ROUND_DZ = -1.25;
+export const RELEASE_ROUND = { ...RELEASE_PT, z: RELEASE_PT.z + ROUND_DZ };
 export const KEEPER_HOME = { x: -16.2, z: 0.55 };
 export const KEEPER_AT_STUMPS = { x: -9.75, z: 0.55 };
 export const STUMPS_X = -9.0;
@@ -33,7 +46,17 @@ export const OVAL = {
   rope: [25.2, 21.2],
   boards: [26.2, 22.2],
   slab: [29.6, 23.4],
+  // The fielding circle (the "30-yard" ring), scaled with the ground: the
+  // ring fielders stand inside it, the deep ones outside.
+  ring: [17.6, 14.8],
 };
+/**
+ * Fielding restrictions: in the powerplay at most two fielders outside the
+ * circle, after it at most five. The powerplay is the first 30% of the
+ * innings, in whole overs (6 of 20, 3 of 10, 2 of 5); a super over has none.
+ */
+export const POWERPLAY = { 5: 2, 10: 3, 20: 6 };
+export const MAX_OUT = { powerplay: 2, after: 5 };
 /** Pavilion gate in the leg-side boards, where batters come and go. */
 export const GATE_PT = { x: -6.0, z: -21.3 };
 export const GATE_OUT = { x: -6.0, z: -22.9 };
@@ -44,6 +67,9 @@ export function ellipseK(x, z, ab) {
   const v = z / ab[1];
   return u * u + v * v;
 }
+
+/** Inside the fielding circle? */
+export const insideRing = (x, z) => ellipseK(x, z, OVAL.ring) < 1;
 
 /** Distance from (x0, z0) along azimuth az to the ellipse [a, b]. */
 export function rayToEllipse(x0, z0, az, ab) {

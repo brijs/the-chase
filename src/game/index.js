@@ -21,7 +21,10 @@ import { createScorecard } from './scorecard.js';
 import { loadChoice, saveChoice, randomConditions, resolveConditions } from './conditions.js';
 import { createConditionsPanel } from './conditionsPanel.js';
 import { createDrs } from './drs.js';
-import { DIFFICULTY, OVAL } from './rules.js';
+import { createFlow } from './matchFlow.js';
+import { simulateInnings } from './aiInnings.js';
+import { resultLine } from './scorecard.js';
+import { DIFFICULTY, OVAL, FORMATS, makeRng } from './rules.js';
 import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './batting.js';
 
 /**
@@ -39,6 +42,7 @@ import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './ba
  *   ?cond=sky:overcast,pitch:green   conditions for this visit (QA; else the saved choice)
  *   ?ump=0.5                  umpire error rate for this visit (QA)
  *   ?drs=1                    the bot gets review offers too (QA; it never takes them itself)
+ *   ?overs=10                 match length (5, 10 or 20; else the last one chosen)
  */
 export function startGame({ renderer, post, scene, camera, canvas, params }) {
   // Calibrated values first: the browser's save, else a baked calibration.json.
@@ -68,6 +72,12 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const fixedSeed = params.has('seed') ? parseInt(params.get('seed'), 10) : null;
   let seed = fixedSeed ?? ((Date.now() % 100000) + 1);
   const bot = params.get('bot') === '1';
+  // Match length: 5, 10 or 20 overs, remembered in this browser.
+  let format = 5;
+  try {
+    format = FORMATS[+localStorage.getItem('chase-format')] ? +localStorage.getItem('chase-format') : 5;
+  } catch {}
+  if (FORMATS[+params.get('overs')]) format = +params.get('overs');
   const manual = params.get('manual') === '1';
 
   // The day's conditions: the saved choice (or a random roll), shown on the intro card.
@@ -96,16 +106,108 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     }
   };
 
+  // ---------------------------------------------------------------- a match
+  // The toss, then two innings: yours is played, the AI's is simulated.
+  // game: { yours, theirs, ai: { sim, book } | null, batFirst }
+  let game = null;
+  const teamsOf = () => {
+    const b = createScorebook(seed);
+    return { yours: b.teams.bat.name, theirs: b.teams.bowl.name };
+  };
+  const line = (name, m) => `${name} ${m.runs}/${m.wkts} (${m.overText()} ov)`;
+
+  /** Straight into a chase of the AI's own target (the bot, QA, and "play again" in tests). */
   const start = () => {
+    if (ctl.phase === 'result') seed = fixedSeed != null ? seed + 1 : (Date.now() % 100000) + 1;
+    game = { ...teamsOf(), ai: null, batFirst: false };
+    playInnings(undefined);
+  };
+  /** Your innings: target undefined (the AI's own), null (bat first) or the runs to win. */
+  function playInnings(target, superOver = false) {
     hud.hideCard();
     hud.reset();
     calib.show(false);
     condPanel.close();
-    if (ctl.phase === 'result') seed = fixedSeed != null ? seed + 1 : (Date.now() % 100000) + 1;
     applyLook(choice.sel);
-    ctl.startMatch(difficulty, seed, { conditions: choice.sel, umpire: choice.umpire });
+    const other = game.ai ? line(game.theirs, game.ai.sim.m) : null;
+    ctl.finalInfo = { teams: game, other };
+    ctl.startMatch(difficulty, seed, { conditions: choice.sel, umpire: choice.umpire, format, target, superOver });
     hud.conditions(choice.sel);
-    scorecard.setBook(createScorebook(seed));
+    scorecard.setBook(createScorebook(seed, { overs: ctl.m.overs }));
+    scorecard.setContext({ other });
+  }
+  /** The toss card; then their innings (you bowl first) or yours (you bat first). */
+  function toss() {
+    if (ctl.phase !== 'intro') return;
+    hud.hideCard();
+    game = { ...teamsOf(), ai: null };
+    flow.toss({
+      yours: game.yours,
+      theirs: game.theirs,
+      conditions: resolveConditions(choice.sel),
+      rnd: makeRng(seed * 977 + 3),
+      onDone: ({ batFirst }) => begin(batFirst),
+    });
+  }
+  /** After the toss (or straight from QA): bat first, or watch their innings and chase. */
+  function begin(batFirst) {
+    game = { ...teamsOf(), ai: null, batFirst };
+    if (batFirst) playInnings(null);
+    else theirInnings(null);
+  }
+  /** The AI bats: setting a total (target null) or chasing yours; in a super over, one over and two wickets. */
+  function theirInnings(target, superOver = false) {
+    const book = createScorebook(seed, { aiBats: true, overs: superOver ? 1 : FORMATS[format].overs });
+    const sim = simulateInnings({ difficulty, seed: seed + (game.supers ?? 0) * 977, format, target, conditions: choice.sel, umpire: choice.umpire, book, superOver });
+    game.ai = { sim, book };
+    hud.hideCard();
+    hud.reset();
+    hud.conditions(null);
+    if (target == null) {
+      flow.innings({ sim, book, title: superOver ? `Super over: ${game.theirs} bat first` : `${game.theirs} bat first`, intro: superOver ? 'one over, two wickets' : `${FORMATS[format].overs} overs · your side in the field`, doneLabel: 'Bat: chase it', onDone: () => playInnings(sim.m.runs + 1, superOver) });
+    } else {
+      const mine = ctl.m;
+      const tied = sim.m.result === 'tied';
+      const winner = sim.m.result === 'won' ? game.theirs : game.yours;
+      const result = superOver ? (tied ? 'Super over tied: another one' : `${winner} win the super over`) : resultLine(sim.m, game.theirs, game.yours);
+      scorecard.setContext({ other: line(game.theirs, sim.m), result });
+      flow.innings({ sim, book, title: `${superOver ? 'Super over: ' : ''}${game.theirs} chase ${target}`, intro: `you made ${mine.runs}/${mine.wkts}`, other: line(game.yours, mine), resultText: result, doneLabel: tied ? 'Super over' : 'New match', onDone: tied ? () => superOverNext('ai') : backToIntro });
+    }
+  }
+  /**
+   * Scores level: a super over, one over and two wickets a side. The side
+   * that batted second bats first; tied again, another one.
+   */
+  function superOverNext(battedSecond) {
+    game.supers = (game.supers ?? 0) + 1;
+    const youFirst = battedSecond === 'player';
+    hud.hideCard();
+    flow.announce({
+      title: game.supers > 1 ? `SUPER OVER ${game.supers}` : 'SUPER OVER',
+      lines: ['Scores level. One over each, two wickets; the higher score wins, and if it is tied again, another super over.', `<b>${youFirst ? `${game.yours} (you)` : game.theirs}</b> bat first: the side that batted second goes first.`],
+      button: youFirst ? 'Bat' : 'Their over',
+      onDone: () => (youFirst ? playInnings(null, true) : theirInnings(null, true)),
+    });
+  }
+  /** After a match: back to the intro card (a new seed: new sides, a new day if random). */
+  function backToIntro() {
+    flow.close();
+    seed = fixedSeed != null ? seed + 1 : (Date.now() % 100000) + 1;
+    if (choice.random) choice = { ...choice, sel: randomConditions() };
+    hud.reset();
+    hud.hideCard();
+    hud.conditions(null);
+    ctl.phase = 'intro';
+    ctl.preview(difficulty, seed, format);
+    applyLook(choice.sel);
+    showIntro();
+  }
+  /** Enter (or the button) on the end-of-innings card. */
+  const afterInnings = () => {
+    if (ctl.m?.result === 'innings') theirInnings(ctl.m.runs + 1, ctl.m.superOver);
+    else if (ctl.m?.result === 'tied') superOverNext('player');
+    else if (game?.ai || !bot) backToIntro();
+    else start();
   };
   const startNets = () => {
     hud.hideCard();
@@ -115,18 +217,28 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     hud.conditions(choice.sel);
     calib.show(true);
   };
-  const showIntro = () => hud.intro({ target: ctl.m.target, difficulty, conditions: choice.sel, random: choice.random, teams: (() => { const b = createScorebook(seed); return { bat: b.teams.bat.name, bowl: b.teams.bowl.name }; })() });
+  const showIntro = () => hud.intro({ difficulty, format, conditions: choice.sel, random: choice.random, teams: (() => { const t = teamsOf(); return { bat: t.yours, bowl: t.theirs }; })() });
+  const pickFormat = (f) => {
+    if (ctl.phase !== 'intro' || !FORMATS[f]) return;
+    format = f;
+    try {
+      localStorage.setItem('chase-format', String(f));
+    } catch {}
+    ctl.preview(difficulty, seed, format);
+    showIntro();
+  };
   const pick = (d) => {
     if (ctl.phase !== 'intro') return;
     difficulty = d;
-    ctl.preview(difficulty, seed);
+    ctl.preview(difficulty, seed, format);
     hud.guide = DIFFICULTY[d].guide;
     showIntro();
   };
   const hud = createHud({
     hidden: params.get('hud') === '0',
     onPick: pick,
-    onStart: () => (ctl.phase === 'intro' || ctl.phase === 'result') && start(),
+    onFormat: pickFormat,
+    onStart: () => (ctl.phase === 'intro' ? toss() : ctl.phase === 'result' && afterInnings()),
     onPad: (dir, lofted, ts, special) => ctl.press(dir, lofted, toGame(ts), special),
     onNets: () => ctl.phase === 'intro' && startNets(),
     onTune: () => panel.toggle(),
@@ -143,6 +255,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     onEvent: (kind, e) => {
       if (kind === 'release' && bot) botPlay(e.tR);
       if (kind === 'review-offer') drs.offer(e);
+      if (kind === 'review-ai') drs.aiReview(e);
       if (kind === 'outcome') {
         replay.record(e);
         calib.onOutcome(e);
@@ -184,12 +297,15 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   // Keyboard and controller drive the same two handlers.
   const handleShot = (dir, lofted, ts, special) => {
+    // On the toss cards a direction with the shot / confirm button picks and confirms (the arrows alone just pick).
+    if (flow.open) return void (flow.dir(dir), dir && flow.key('enter'));
     if (padPanel.isOpen || panel.isOpen || condPanel.isOpen || replay.active || drs.busy) return;
     if (calib.cardOpen) calib.mark(dir, special);
     else ctl.press(dir, lofted, toGame(ts), special);
   };
   const handleKey = (k) => {
       if (scorecard.isOpen) return void (['enter', 'pause', 'scorecard', 'skip'].includes(k) && scorecard.close());
+      if (flow.open) return void (k === 'mute' ? audio.toggleMute() : flow.key(k));
       if (drs.busy) return void (k === 'mute' ? audio.toggleMute() : drs.key(k));
       if (replay.active) return void replay.key(k);
       if (k === 'scorecard') return void (!ctl.nets && ['live', 'paused', 'ending', 'result'].includes(ctl.phase) && scorecard.show('view'));
@@ -203,7 +319,8 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       if (calib.cardOpen && calib.key(k)) return;
       if (k === 'feedback') return calib.request();
       if (k === 'nets' && ctl.phase === 'intro') return startNets();
-      if (k === 'enter' && (ctl.phase === 'intro' || ctl.phase === 'result')) start();
+      if (k === 'enter' && ctl.phase === 'intro') toss();
+      else if (k === 'enter' && ctl.phase === 'result') afterInnings();
       else if (k === 'pause' && (ctl.phase === 'live' || ctl.phase === 'paused')) {
         ctl.phase = ctl.phase === 'paused' ? 'live' : 'paused';
         hud.pause(ctl.phase === 'paused');
@@ -214,8 +331,9 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
       else if (k === 'guide') hud.guide = !hud.guide;
       else if (k === 'mute') audio.toggleMute();
       else if (['1', '2', '3'].includes(k) && ctl.phase === 'intro') pick(Object.keys(DIFFICULTY)[+k - 1]);
+      else if (['4', '5', '6'].includes(k) && ctl.phase === 'intro') pickFormat(+Object.keys(FORMATS)[+k - 4]);
   };
-  createInput({ onShot: handleShot, onKey: handleKey });
+  createInput({ onShot: handleShot, onKey: handleKey, onArrow: (d) => flow.open && flow.dir(d) });
 
   // Game controller (Gamepad API): polled every frame, mapped in the Controller panel (K).
   const toast = document.createElement('div');
@@ -226,7 +344,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const pad = createGamepad({
     onShot: handleShot,
     onKey: handleKey,
-    cardOpen: () => scorecard.isOpen || replay.active || drs.busy || calib.cardOpen || panel.isOpen || padPanel.isOpen || condPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
+    cardOpen: () => scorecard.isOpen || flow.open || replay.active || drs.busy || calib.cardOpen || panel.isOpen || padPanel.isOpen || condPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
     onConnect: (gp, on) => {
       toast.innerHTML = on ? `🎮 <b>${gp.id.replace(/\(.*\)/, '').trim() || 'Controller'}</b> connected · ${buttonName(pad.settings.map.ground)} shot · K or ${buttonName(pad.settings.map.pad)} to map buttons` : '🎮 Controller disconnected';
       toast.style.display = 'block';
@@ -236,8 +354,9 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   });
   const padPanel = createGamepadPanel({ pad, ctl, root: hudRoot });
   let curAspect = 1.6;
-  const replay = createReplay({ ctl, camera, canvas, root: hudRoot, aspect: () => curAspect, pad });
+  const replay = createReplay({ ctl, camera, canvas, root: hudRoot, aspect: () => curAspect, pad, onReview: (o, cur, done) => drs.analyse(o, cur, done) });
   const scorecard = createScorecard({ ctl, root: hudRoot });
+  const flow = createFlow({ root: hudRoot, audio });
   const drs = createDrs({ ctl, scene, camera, root: hudRoot, audio, aspect: () => curAspect, fx });
   // The bot never reviews; with ?drs=1 it still gets the offer (QA drives it).
   ctl.noReviews = bot && params.get('drs') !== '1';
@@ -326,7 +445,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     frame(dt);
   }
 
-  ctl.preview(difficulty, seed);
+  ctl.preview(difficulty, seed, format);
   hud.guide = DIFFICULTY[difficulty].guide;
   if (bot) start();
   else if (params.get('nets') === '1') startNets();
@@ -368,6 +487,17 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     replay,
     scorecard,
     drs,
+    flow,
+    toss,
+    begin,
+    superOverNext,
+    playInnings,
+    theirInnings,
+    backToIntro,
+    afterInnings,
+    get game() {
+      return game;
+    },
     condPanel,
     conditions: () => choice,
     setConditions: setChoice,

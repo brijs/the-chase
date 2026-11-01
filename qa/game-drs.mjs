@@ -70,7 +70,7 @@ async function runReview(tag) {
 }
 
 // 1. Pitched outside leg, left, given out.
-const outsideLeg = { type: 'straight', kph: 134, lenM: 5.2, lineZ: -0.05, hStumps: 0.42, swing: 0, seam: 0.19 };
+const outsideLeg = { type: 'straight', kph: 134, lenM: 5.2, lineZ: -0.05, hStumps: 0.42, swing: 0, seam: 0.45 };
 let off = await until(outsideLeg, null, 'lbw');
 check(!!off && off.offerOn && off.truth === 'notOut', `given out LBW pitching outside leg (after ${off?.balls} balls); the offer is up`);
 await page.evaluate(() => window.__game.advance(3, 1 / 30));
@@ -100,6 +100,53 @@ check(r.result?.overturned && r.out === null && r.wkts === off.wkts, `UltraEdge:
 off = await until(plumbBall, null, 'lbw');
 const walked = await page.evaluate(() => { const g = window.__game; g.advance(10.6, 1 / 30); g.advance(0.5, 1 / 30); return { phase: g.ctl.phase, out: g.ctl.cur.outcome.out, wkts: g.ctl.m.wkts, offer: g.drs.offering }; });
 check(!walked.offer && walked.out === 'lbw' && walked.wkts === off.wkts + 1, `after 10 s without a review the batter walks (wickets ${off.wkts} -> ${walked.wkts})`);
+
+// 5. The replay's review: an analysis of the last ball, nothing changes.
+const before = await page.evaluate(() => { const g = window.__game; g.advance(1.5, 1 / 30); return { wkts: g.ctl.m.wkts, left: g.ctl.m.reviewsLeft, runs: g.ctl.m.runs }; });
+const rev = await page.evaluate(() => {
+  const g = window.__game;
+  const started = g.replay.start();
+  g.advance(0.5, 1 / 30);
+  g.replay.review();
+  return { started, active: g.drs.active, head: document.querySelector('#drs-head').innerText };
+});
+if (process.env.DEBUG) console.log('   ', JSON.stringify(await page.evaluate(() => ({ o: window.__game.ctl.cur.outcome.call, kind: window.__game.ctl.cur.outcome.kind, pad: window.__game.ctl.cur.outcome.pad }))));
+check(rev.started && rev.active && /REPLAY REVIEW/.test(rev.head), `replay → Review runs the analysis (${rev.head.replace(/\n/g, ' · ')})`);
+const seen = [];
+for (let n = 0; n < 200; n++) {
+  const st = await page.evaluate(() => { window.__game.advance(0.25, 1 / 30); return window.__game.drs.state(); });
+  if (!st) break;
+  if (!seen.includes(st.step)) {
+    seen.push(st.step);
+    if (process.env.DEBUG) console.log('   ', JSON.stringify(st));
+    await page.evaluate(() => window.__game.advance(1.6, 1 / 30));
+    await page.screenshot({ path: `qa/game/drs/replay-review-${seen.length}.png` });
+  }
+}
+const after = await page.evaluate(() => { const g = window.__game; return { replay: g.replay.active, bar: document.querySelector('#replay').classList.contains('on'), wkts: g.ctl.m.wkts, left: g.ctl.m.reviewsLeft, runs: g.ctl.m.runs }; });
+check(seen.length >= 3 && after.replay && after.bar, `the analysis ran ${seen.length} steps and handed back to the replay`);
+check(after.wkts === before.wkts && after.left === before.left && after.runs === before.runs, 'nothing changed: wickets, runs and reviews as they were');
+await page.evaluate(() => window.__game.replay.stop?.() ?? window.__game.replay.key('pause'));
+
+// 6. The fielding side reviews: a plumb one given not out (a fresh match: the last may be over).
+const aiRev = await page.evaluate((plumb) => {
+  const g = window.__game;
+  g.start();
+  for (let i = 0; i < 30; i++) {
+    g.until((c) => c.phase === 'live' && (!c.cur || c.cur.resolved), 40, 1 / 30);
+    const prev = g.ctl.cur;
+    g.ctl.forceNext = plumb;
+    g.until((c) => c.cur && c.cur !== prev, 40, 1 / 30);
+    const cur = g.ctl.cur;
+    g.until((c) => c.phase === 'review' || c.phase === 'drs' || (c.cur.resolved && c.t > c.cur.tR + 4.5), 40, 1 / 30);
+    if (g.ctl.phase === 'review') { g.drs.accept(); continue; }
+    if (g.drs.active && cur.review?.by === 'ai') return { balls: i + 1, wkts: g.ctl.m.wkts, left: g.ctl.m.aiReviewsLeft, truth: cur.review.o.umpire.truth, head: document.querySelector('#drs-head').innerText };
+  }
+  return null;
+}, plumbBall);
+check(!!aiRev && /fielding side/.test(aiRev.head), `the fielding side reviews a not-out (after ${aiRev?.balls} balls; truth ${aiRev?.truth})`);
+r = await runReview('ai');
+check(aiRev && (aiRev.truth === 'out' ? r.out === 'lbw' && r.wkts === aiRev.wkts + 1 && r.result?.overturned : !r.out), `their review: ${r.result?.overturned ? 'overturned, OUT' : 'stands, not out'} (wickets ${aiRev?.wkts} -> ${r.wkts}, their reviews ${await page.evaluate(() => window.__game.ctl.m.aiReviewsLeft)})`);
 const audio = await page.evaluate(() => window.__game.audio.played);
 check(errors.length === 0, errors.length ? errors.slice(0, 3).join('\n') : 'no page errors');
 await browser.close();
