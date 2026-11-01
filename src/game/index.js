@@ -20,6 +20,7 @@ import { createScorebook } from './scorebook.js';
 import { createScorecard } from './scorecard.js';
 import { loadChoice, saveChoice, randomConditions, resolveConditions } from './conditions.js';
 import { createConditionsPanel } from './conditionsPanel.js';
+import { createDrs } from './drs.js';
 import { DIFFICULTY, OVAL } from './rules.js';
 import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './batting.js';
 
@@ -36,6 +37,8 @@ import { SHOTS, SHOT_KEYS, SPECIAL_KEYS, shotFor, shotFit, shotFoot } from './ba
  *   ?nets=1                   straight into the calibration nets
  *   ?cards=0                  no automatic scorecards (QA; B still shows it)
  *   ?cond=sky:overcast,pitch:green   conditions for this visit (QA; else the saved choice)
+ *   ?ump=0.5                  umpire error rate for this visit (QA)
+ *   ?drs=1                    the bot gets review offers too (QA; it never takes them itself)
  */
 export function startGame({ renderer, post, scene, camera, canvas, params }) {
   // Calibrated values first: the browser's save, else a baked calibration.json.
@@ -69,8 +72,9 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   // The day's conditions: the saved choice (or a random roll), shown on the intro card.
   let choice = loadChoice();
-  if (params.has('cond')) choice = { random: false, sel: { ...choice.sel, ...Object.fromEntries(params.get('cond').split(',').map((kv) => kv.split(':'))) } };
+  if (params.has('cond')) choice = { ...choice, random: false, sel: { ...choice.sel, ...Object.fromEntries(params.get('cond').split(',').map((kv) => kv.split(':'))) } };
   if (choice.random) choice = { ...choice, sel: randomConditions() };
+  if (params.has('ump')) choice = { ...choice, umpire: { ...choice.umpire, bad: +params.get('ump') } };
   /** The ground looks the part: the light for the sky, the strip's colour for the pitch. */
   function applyLook(sel) {
     const c = resolveConditions(sel);
@@ -86,6 +90,8 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     if (ctl.phase === 'intro') showIntro();
     if (ctl.nets) {
       ctl.m.cond = resolveConditions(choice.sel);
+      ctl.m.umpireBad = choice.umpire.bad;
+      ctl.m.drs = choice.umpire.drs;
       hud.conditions(choice.sel);
     }
   };
@@ -97,7 +103,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     condPanel.close();
     if (ctl.phase === 'result') seed = fixedSeed != null ? seed + 1 : (Date.now() % 100000) + 1;
     applyLook(choice.sel);
-    ctl.startMatch(difficulty, seed, { conditions: choice.sel });
+    ctl.startMatch(difficulty, seed, { conditions: choice.sel, umpire: choice.umpire });
     hud.conditions(choice.sel);
     scorecard.setBook(createScorebook(seed));
   };
@@ -105,7 +111,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     hud.hideCard();
     hud.reset();
     condPanel.close();
-    ctl.startMatch(calib.level, seed, { nets: true, field: calib.field, conditions: choice.sel });
+    ctl.startMatch(calib.level, seed, { nets: true, field: calib.field, conditions: choice.sel, umpire: choice.umpire });
     hud.conditions(choice.sel);
     calib.show(true);
   };
@@ -136,6 +142,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     hud,
     onEvent: (kind, e) => {
       if (kind === 'release' && bot) botPlay(e.tR);
+      if (kind === 'review-offer') drs.offer(e);
       if (kind === 'outcome') {
         replay.record(e);
         calib.onOutcome(e);
@@ -177,12 +184,13 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
 
   // Keyboard and controller drive the same two handlers.
   const handleShot = (dir, lofted, ts, special) => {
-    if (padPanel.isOpen || panel.isOpen || condPanel.isOpen || replay.active) return;
+    if (padPanel.isOpen || panel.isOpen || condPanel.isOpen || replay.active || drs.busy) return;
     if (calib.cardOpen) calib.mark(dir, special);
     else ctl.press(dir, lofted, toGame(ts), special);
   };
   const handleKey = (k) => {
       if (scorecard.isOpen) return void (['enter', 'pause', 'scorecard', 'skip'].includes(k) && scorecard.close());
+      if (drs.busy) return void (k === 'mute' ? audio.toggleMute() : drs.key(k));
       if (replay.active) return void replay.key(k);
       if (k === 'scorecard') return void (!ctl.nets && ['live', 'paused', 'ending', 'result'].includes(ctl.phase) && scorecard.show('view'));
       if (k === 'replay') return void replay.start();
@@ -218,7 +226,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   const pad = createGamepad({
     onShot: handleShot,
     onKey: handleKey,
-    cardOpen: () => scorecard.isOpen || replay.active || calib.cardOpen || panel.isOpen || padPanel.isOpen || condPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
+    cardOpen: () => scorecard.isOpen || replay.active || drs.busy || calib.cardOpen || panel.isOpen || padPanel.isOpen || condPanel.isOpen || ['intro', 'result', 'paused'].includes(ctl.phase),
     onConnect: (gp, on) => {
       toast.innerHTML = on ? `🎮 <b>${gp.id.replace(/\(.*\)/, '').trim() || 'Controller'}</b> connected · ${buttonName(pad.settings.map.ground)} shot · K or ${buttonName(pad.settings.map.pad)} to map buttons` : '🎮 Controller disconnected';
       toast.style.display = 'block';
@@ -230,6 +238,9 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   let curAspect = 1.6;
   const replay = createReplay({ ctl, camera, canvas, root: hudRoot, aspect: () => curAspect, pad });
   const scorecard = createScorecard({ ctl, root: hudRoot });
+  const drs = createDrs({ ctl, scene, camera, root: hudRoot, audio, aspect: () => curAspect, fx });
+  // The bot never reviews; with ?drs=1 it still gets the offer (QA drives it).
+  ctl.noReviews = bot && params.get('drs') !== '1';
   const book = () => scorecard.book;
 
   /** The computer bats: best-fitting shot, near-perfect timing, leaves the wide ones. */
@@ -284,6 +295,17 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
   }
 
   function frame(dt) {
+    if (drs.busy) drs.update(dt);
+    if (drs.active) {
+      // The third umpire's views: past moments, its own camera and overlays.
+      drs.apply();
+      timeUniform.value = drs.tView;
+      ctl.render(drs.tView, { trail: false });
+      drs.afterRender();
+      post.render(scene, camera, CLIP);
+      hud.update(ctl.t, ctl);
+      return;
+    }
     if (replay.active) {
       // The camera first (it reads past ball positions), then the field at that time.
       replay.applyCamera();
@@ -345,6 +367,7 @@ export function startGame({ renderer, post, scene, camera, canvas, params }) {
     padPanel,
     replay,
     scorecard,
+    drs,
     condPanel,
     conditions: () => choice,
     setConditions: setChoice,

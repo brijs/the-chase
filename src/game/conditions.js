@@ -105,14 +105,17 @@ export function describeConditions(sel) {
   return { sky: `${SKY[c.sky].icon} ${SKY[c.sky].name}`, wind, pitch: PITCH[c.pitch].name, outfield: `${OUTFIELD[c.outfield].name} outfield` };
 }
 
+/** The umpires: how often a close call goes wrong, and whether the batter can review (DRS). */
+export const UMPIRE = { bad: 0.25, drs: true };
+
 const STORE = 'chase-conditions-v1';
-/** The last choice on this browser: { sel, random }. */
+/** The last choice on this browser: { sel, random, umpire }. */
 export function loadChoice() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE) ?? 'null');
-    if (s && s.sel) return { sel: { ...DEFAULT, ...s.sel }, random: !!s.random };
+    if (s && s.sel) return { sel: { ...DEFAULT, ...s.sel }, random: !!s.random, umpire: { ...UMPIRE, ...s.umpire } };
   } catch {}
-  return { sel: { ...DEFAULT }, random: false };
+  return { sel: { ...DEFAULT }, random: false, umpire: { ...UMPIRE } };
 }
 export function saveChoice(choice) {
   try {

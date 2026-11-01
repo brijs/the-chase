@@ -112,7 +112,7 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
     <div id="hud-help" class="panel">
       <table>${[0, 1, 2].map((r) => `<tr>${GRID.slice(r * 3, r * 3 + 3).map(([, k, n]) => `<td><span class="k">${k}</span> ${n}</td>`).join('')}</tr>`).join('')}</table>
       <div class="tab">Controls (H)</div>
-      <div class="rows">hold arrows · <b>D</b> ground · <b>A</b> lofted · no key = leave<br><b>S</b> sweep · <b>S</b>+← reverse sweep · <b>S</b>+↑ scoop (tighter timing)<br>Space skip · R replay · B scorecard · C camera · G timing meter · M sound · T tuning · K controller · P pause · H hide</div>
+      <div class="rows">hold arrows · <b>D</b> ground · <b>A</b> lofted · no key = leave<br><b>S</b> sweep · <b>S</b>+← reverse sweep · <b>S</b>+↑ scoop (tighter timing)<br>Space skip · R replay · V review · B scorecard · C camera · G timing meter · M sound · T tuning · K controller · P pause · H hide</div>
     </div>
     <div id="hud-pad"><div class="grid">${GRID.map(([d, , n]) => `<button data-dir="${d}">${n}</button>`).join('')}${[['', 'Sweep'], ['L', 'Reverse'], ['U', 'Scoop']].map(([d, n]) => `<button data-dir="${d}" data-special="1">${n}</button>`).join('')}</div><button class="loft">LOFT</button></div>
     <div id="hud-card" class="panel"></div>`;
@@ -219,6 +219,8 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
       else if (o.runs === 4) flash('FOUR', '', null, t);
       else if (o.wide) flash('WIDE', '', '+1', t + 0.2, 1.2);
       else if (o.fielding?.type === 'drop') flash('DROPPED', '', o.fielding.name, t, 1.4);
+      else if (o.overturned) flash('NOT OUT', '', 'overturned on review', t, 1.8);
+      else if (o.umpire && o.umpire.truth !== 'notOut') flash('NOT OUT', '', 'the umpire says no', t, 1.4);
     },
     score(m, t = lastT) {
       later(t, () => {
@@ -235,6 +237,7 @@ export function createHud({ hidden = false, onPick, onStart, onPad, onNets, onTu
         top.innerHTML = `<span class="dim">TARGET</span> <b>${m.target}</b>
           <span><b>${m.runs}/${m.wkts}</b> <span class="dim">(${m.overText()} of ${GAME.overs})</span></span>
           ${m.result ? '' : `<span class="need">Need ${Math.max(0, need)} off ${bl}</span><span class="dim">RRR ${rrr}</span>`}
+          ${m.drs ? `<span class="dim" title="reviews left">DRS ${'●'.repeat(m.reviewsLeft)}${'○'.repeat(3 - m.reviewsLeft)}</span>` : ''}
           <span id="hud-over">${chips}</span>`;
       });
     },

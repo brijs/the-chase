@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import { tuning } from '../src/game/tuning.js';
 import { simulateBatted } from '../src/game/ballSim.js';
 import { resolveConditions } from '../src/game/conditions.js';
+import { trackLbw, lbwVerdict, decideLbw, decideEdgeCatch, decidePhantomEdge } from '../src/game/umpire.js';
+import { makeRng } from '../src/game/rules.js';
 
 // CAL=calibration.json runs with a calibration applied (default: code defaults).
 if (process.env.CAL) {
@@ -104,6 +106,39 @@ cases.push([`a cross-wind to off pushes a straight lofted hit ${cross.toFixed(1)
 const roll = (outfield) => { const c = resolveConditions({ ...calm, outfield }); return simulateBatted({ x: -7.1, y: 0.2, z: 0 }, { az: 0.3, speed: 11, elev: 0 }, { roll: c.roll }).samples.at(-1).x; };
 cases.push([`a 11 m/s ground shot rolls to x ${roll('slow').toFixed(1)} (slow) < ${roll('standard').toFixed(1)} < ${roll('fast').toFixed(1)} (fast)`, () => 0, () => roll('slow') < roll('standard') && roll('standard') < roll('fast')]);
 cases.push(['no conditions = the neutral day (calm, standard)', () => 0, () => { const m = createMatch({ seed: 3 }); return m.cond.wind.x === 0 && m.cond.wind.z === 0 && m.cond.swing === 1 && m.cond.keep === 0.9; }]);
+
+// DRS: ball tracking against the zones, and the umpire.
+const lbwBall = (o) => buildDelivery({ type: 'straight', kph: 136, lenM: 5.2, lineZ: -0.02, hStumps: 0.45, swing: 0, seam: 0, length: 'good', ...o }, 0.72);
+const plumb = trackLbw(lbwBall({}), 'stance', false);
+cases.push([`plumb: pitching ${plumb?.pitching}, impact ${plumb?.impact}, wickets ${plumb?.wickets} -> ${plumb && lbwVerdict(plumb)}`, () => 0, () => plumb && lbwVerdict(plumb) === 'out']);
+const leg = trackLbw(lbwBall({ lineZ: -0.05, seam: 0.3 }), 'stance', false);
+cases.push([`seamed in from outside leg: pitching ${leg?.pitching} -> ${leg && lbwVerdict(leg)}`, () => 0, () => leg && leg.pitching === 'outsideLeg' && lbwVerdict(leg) === 'notOut']);
+const high = trackLbw(lbwBall({ hStumps: 0.76 }), 'stance', false);
+cases.push([`clipping the bails: wickets ${high?.wickets} -> ${high && lbwVerdict(high)}`, () => 0, () => high && high.wickets === 'umpiresCall' && lbwVerdict(high) === 'umpiresCall']);
+const over = trackLbw(lbwBall({ hStumps: 0.9 }), 'stance', false);
+cases.push([`going over: wickets ${over?.wickets}`, () => 0, () => !over || over.wickets === 'missing']);
+const perfect = decideLbw({ del: lbwBall({}), foot: 'stance', offered: false, bad: 0, rng: makeRng(1) });
+cases.push(['a perfect umpire (bad 0) gives the plumb one', () => 0, () => perfect.given && perfect.truth === 'out']);
+const share = (f, n = 2000) => { const r = makeRng(7); let k = 0; for (let i = 0; i < n; i++) if (f(r)) k++; return k / n; };
+const plumbGiven = share((r) => decideLbw({ del: lbwBall({}), foot: 'stance', offered: false, bad: 0.25, rng: r }).given);
+const legGiven = share((r) => decideLbw({ del: lbwBall({ lineZ: -0.05, seam: 0.2 }), foot: 'stance', offered: false, bad: 0.25, rng: r }).given);
+cases.push([`umpire at 25%: plumb given ${(plumbGiven * 100).toFixed(0)}%, just outside leg given ${(legGiven * 100).toFixed(0)}%`, () => 0, () => plumbGiven > 0.85 && plumbGiven < 0.95 && legGiven > 0.05 && legGiven < 0.3]);
+const faint = { az: Math.PI - 0.15, edge: 'outside' };
+const thick = { az: Math.PI - 0.6, edge: 'outside' };
+const keeper = { by: 'keeper', name: 'the keeper' };
+const faintMissed = share((r) => !decideEdgeCatch({ shot: faint, fielding: keeper, bad: 0.25, rng: r }).given);
+cases.push([`faint edge to the keeper missed ${(faintMissed * 100).toFixed(0)}% of the time; thick edges always given`, () => 0, () => faintMissed > 0.1 && faintMissed < 0.25 && decideEdgeCatch({ shot: thick, fielding: keeper, bad: 0.25, rng: makeRng(2) }).faint === false]);
+const phantom = share((r) => !!decidePhantomEdge({ bad: 0.25, rng: r }));
+cases.push([`caught behind off nothing: ${(phantom * 100).toFixed(1)}% of balls beaten outside off (none with bad 0)`, () => 0, () => phantom > 0.02 && phantom < 0.12 && decidePhantomEdge({ bad: 0, rng: makeRng(3) }) === null]);
+// Reviews: lost when the decision stands, kept on umpire's call, overturned when not out.
+{
+  const m = createMatch({ seed: 9, umpire: { bad: 0.25, drs: true } });
+  const o = { out: 'lbw', umpire: { kind: 'lbw', given: true, truth: 'out' } };
+  const a = m.review(o);
+  const b = m.review({ ...o, umpire: { ...o.umpire, truth: 'umpiresCall' } });
+  const c = m.review({ ...o, umpire: { ...o.umpire, truth: 'notOut' } });
+  cases.push([`reviews: upheld costs one (${m.reviewsLeft} left after upheld, umpire's call, overturned)`, () => 0, () => a.lost && b.umpiresCall && !b.lost && c.overturned && m.reviewsLeft === 2 && m.overturn(o).out === null]);
+}
 
 let fail = 0;
 for (const [name, p, ok] of cases) {

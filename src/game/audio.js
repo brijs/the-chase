@@ -9,7 +9,9 @@
  *   appeal   "howzat" (rising then falling formant shout)
  *   crowd    many synthesised voices, not noise: a chattering bed that never stops,
  *            and shouted cheers / roars / oohs (plus claps and whistles) over it,
- *            all through a big-stand reverb
+ *            all through a big-stand reverb; boo for a decision they don't like
+ *   review   the DRS: countdown tick, sting, a low pulse while it is checked,
+ *            scanner whir, a bleep per finding, a riser and the verdict hit
  *
  * The context starts on the first key or tap (browsers require a gesture).
  * M mutes; the choice is remembered in localStorage when it is available.
@@ -418,6 +420,61 @@ export function createAudio() {
     },
     roar(t) {
       crowd(t, 1, 3.6, { clap: 0.8, bright: 1.2, whistle: 4 });
+    },
+    boo(t, { size = 0.8 } = {}) {
+      // A long, low, falling "boooo" from the stands: the shout bed through a dark "oo" formant.
+      const dur = 2.2 + 1.2 * size;
+      if (shoutBuf) {
+        const { f } = loopVoices(shoutBuf, t, dur, { peak: 0.12 + 0.5 * size, attack: 0.35, cutoff: 700, rate: 0.72 });
+        f.frequency.setValueAtTime(700, t);
+        f.frequency.exponentialRampToValueAtTime(380, t + dur);
+      }
+      for (let k = 0; k < 8; k++) {
+        const f0 = 105 + k * 14 + Math.random() * 12;
+        voice(t + Math.random() * 0.3, dur * (0.7 + Math.random() * 0.3), [[0, f0 * 1.05], [dur * 0.5, f0], [dur, f0 * 0.82]], [[300, 6, 1], [700, 6, 0.25]], 0.02 + 0.035 * size, 0, stands);
+      }
+    },
+    // ---- the review
+    tick(t, { hot = false } = {}) {
+      tone(t, 0.05, { type: 'square', f0: hot ? 1320 : 880, f1: hot ? 1300 : 870, peak: hot ? 0.12 : 0.08 });
+      noise(t, 0.01, { type: 'highpass', freq: 4000, peak: 0.08 });
+    },
+    drsSting(t, { soft = false } = {}) {
+      // A whoosh up into a bright two-note chime.
+      const k = soft ? 0.5 : 1;
+      const { f } = noise(t, 0.5, { freq: 600, Q: 1.5, peak: 0.25 * k, attack: 0.35 });
+      f.frequency.setValueAtTime(400, t);
+      f.frequency.exponentialRampToValueAtTime(5000, t + 0.6);
+      for (const [dt, f0] of [[0.5, 659], [0.5, 988], [0.62, 1319]]) tone(t + dt, 0.6, { type: 'triangle', f0, peak: 0.09 * k, attack: 0.01 });
+    },
+    drsPulse(t) {
+      // A heartbeat: lub-dub, low.
+      tone(t, 0.14, { f0: 70, f1: 45, peak: 0.42, attack: 0.008 });
+      tone(t + 0.19, 0.12, { f0: 62, f1: 42, peak: 0.3, attack: 0.008 });
+    },
+    drsWhir(t) {
+      // The scanner sweeping: a filtered whir with a slow rising tone.
+      const { f } = noise(t, 1.0, { freq: 1800, Q: 8, peak: 0.07, attack: 0.1 });
+      f.frequency.setValueAtTime(900, t);
+      f.frequency.exponentialRampToValueAtTime(3200, t + 1.0);
+      tone(t, 1.0, { type: 'sawtooth', f0: 220, f1: 330, peak: 0.02, attack: 0.15 });
+    },
+    drsReveal(t, { good = false, uc = false } = {}) {
+      const [a, b] = uc ? [660, 660] : good ? [740, 988] : [880, 587];
+      tone(t, 0.09, { type: 'square', f0: a, peak: 0.07 });
+      tone(t + 0.1, 0.16, { type: 'square', f0: b, peak: 0.07 });
+    },
+    drsRiser(t) {
+      const { f } = noise(t, 1.3, { freq: 500, Q: 3, peak: 0.16, attack: 1.2 });
+      f.frequency.setValueAtTime(300, t);
+      f.frequency.exponentialRampToValueAtTime(6000, t + 1.35);
+      tone(t, 1.3, { type: 'sawtooth', f0: 110, f1: 440, peak: 0.05, attack: 1.2 });
+    },
+    drsVerdict(t, { good = false } = {}) {
+      // A hit: thump plus a chord, major for not out, a darker one for out.
+      tone(t, 0.3, { f0: 90, f1: 40, peak: 0.55 });
+      noise(t, 0.25, { type: 'lowpass', freq: 1200, peak: 0.35 });
+      for (const f0 of good ? [523, 659, 784] : [440, 523, 622]) tone(t, 1.1, { type: 'triangle', f0, peak: 0.07, attack: 0.01 });
     },
     applause(t, { size = 0.35 } = {}) {
       noise(t, 1.8 + size * 2, { type: 'highpass', freq: 900, Q: 0.5, peak: 0.15 + 0.4 * size, attack: 0.2, buf: clapBuf, dest: stands });

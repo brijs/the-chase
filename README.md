@@ -94,6 +94,61 @@ The other keys:
 
 Touch devices get an on-screen 3×3 pad and a LOFT toggle.
 
+### Conditions
+
+**O**, or *Conditions* on the intro card, sets the day. It is fixed once a
+match starts (the nets take changes from the next ball) and remembered in this
+browser. 🎲 rolls a random day; *New random conditions every match* rolls one
+per match.
+
+| | Choices | What it does |
+| --- | --- | --- |
+| Sky | sunny, patchy cloud, overcast, heavy and humid | swing ×0.7 to ×1.75; the light dims under cloud |
+| Wind | calm, breeze (13 km/h), strong (25 km/h); into the batter, behind, to off, to leg | drifts the delivery; carries or holds up anything in the air after the bat (a strong wind moves a lofted drive's carry by about 3 m) |
+| Pitch | flat road, good, green top, dry and dusty, cracked | seam movement, bounce, uneven bounce (the odd shooter, the odd one that rears), pace off the surface; the strip's colour |
+| Outfield | slow, normal, fast | how far a ground shot rolls |
+
+The bowler bowls to them: more swing under cloud, more cutters and bouncers on
+a pitch that helps them. The corner of the screen shows the day, with the
+wind's direction as an arrow on screen.
+
+### Umpires and DRS
+
+The umpires get close calls wrong: a slider in the Conditions panel (default
+25%) sets how often. A plumb LBW is rarely missed; a near miss, a faint edge
+or a feather off the bat before the pad is where the mistakes are. A wrong
+not-out just lets you off (*NOT OUT · the umpire says no*).
+
+Given out **LBW**, or **caught off a faint edge** (or off nothing at all),
+play holds with the finger up and you have **10 seconds to review**: **V** or
+Enter (controller: R2 or Confirm), or Esc / Space (Back) to walk. Three
+reviews an innings; a review that comes back *umpire's call* is kept. Thick
+edges and catches in the field can't be reviewed.
+
+The third umpire then goes through it on the frozen field, with a low pulse
+under it and a bleep for each finding:
+
+- **Replay:** the delivery again from the broadcast end at half speed.
+- **UltraEdge:** side-on at the bat in slow motion with the snickometer trace
+  underneath. A bat touch is a sharp spike; the pad is a broad hump.
+- **Ball tracking** (LBW), as the playing conditions define it:
+  - The pitching zone is drawn on the strip: in line between the outer
+    edges of the stumps (blue), outside leg (red).
+  - The track is drawn in red from the hand to where it **pitched**.
+    Outside leg is never out.
+  - Then on to the **impact**. The centre of the ball in the zone is in line;
+    part of the ball in it is umpire's call. Outside off with no shot played
+    counts as in line.
+  - Then the projection in blue on to the **wickets**: the stumps up to the
+    top of the bails, with the umpire's-call margin one ball wide drawn round
+    them.
+- **Decision:** a riser, then OUT or NOT OUT and why: *overturned*,
+  *umpire's call · review retained* or *original decision stands · review
+  lost*. The crowd, on the batter's side, cheers or boos.
+
+Space during a review skips to the decision. The DRS dots in the score bar
+show the reviews left. The nets have unlimited reviews.
+
 ### Scorecard
 
 After every over, every wicket and the end of the innings, play pauses, the
@@ -379,6 +434,10 @@ and with no calibration the outcome model is byte-for-byte unchanged.
 | `node qa/game-calibrate.mjs` | The flow in a browser. The picker forces the ball; 5 answers move the offset; panel edits and undo work live; a confirmed Save survives a reload into a regular match (presses corrected by the offset, no questions asked); Reset clears; Import restores. |
 | `CAL=calibration.json node qa/game-sim.mjs` | Balance with a calibration applied (also works for `game-rules.mjs`). |
 | `node qa/game-poses.mjs`, `node qa/game-moments.mjs` | Close-ups of every shot at impact and at the finish, plus bowled, keeper take, catches, dives, walk-off and new batter (`qa/game/`). |
+| `node qa/game-conditions.mjs` | The Conditions panel and its effects on the match and the look; OUT, DROPPED, FOUR and SIX never show before the catch, drop or rope. |
+| `node qa/game-drs.mjs` | With an umpire who errs whenever he can: an LBW pitching outside leg is overturned (review kept), a plumb one stands (review lost, wicket falls), a caught-behind off nothing is overturned on UltraEdge, and an offer left to run out walks the batter. Screenshots of every stage in `qa/game/drs/`. |
+| `UMP=0.25 node qa/game-sim.mjs` | Balance with an erring umpire and no reviews (also `COND='{"sky":"humid"}'`). |
+| `node qa/crowd-preview.mjs` | Records the crowd from the game's own mix to `qa/game/crowd-preview.wav`, with a spectrogram. |
 | `node qa/frame-hash.mjs` | Diorama frames are unchanged. |
 
 Known simplifications:

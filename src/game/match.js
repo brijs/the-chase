@@ -5,6 +5,7 @@ import { simulateBatted } from './ballSim.js';
 import { fieldPositions, resolveFielding } from './fielding.js';
 import { setTarget, planOver, chooseDelivery, newMemory, remember, TYPES } from './bowlerAI.js';
 import { resolveConditions, NEUTRAL } from './conditions.js';
+import { decideLbw, decideEdgeCatch, decidePhantomEdge } from './umpire.js';
 
 /**
  * The scorebook and one-ball resolution, independent of any rendering. The
@@ -17,7 +18,12 @@ import { resolveConditions, NEUTRAL } from './conditions.js';
  *   const out = m.resolve(ball, input)    input: { shotKey, lofted, pressT } | null (leave)
  *   m.record(out)                         scorebook, strike, result
  */
-export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null } = {}) {
+/**
+ * umpire: { bad, drs } — how often close calls go wrong (0 = a perfect umpire,
+ * the default for the simulator) and whether the batter may review (3 per
+ * innings; one that ends on umpire's call is kept).
+ */
+export function createMatch({ difficulty = 'medium', seed = 1, nets = false, conditions = null, umpire = null } = {}) {
   const diff = DIFFICULTY[difficulty];
   const rng = makeRng(seed);
   const m = {
@@ -41,6 +47,9 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     strikerIdx: 0, // which of the two batters at the crease is on strike
     nets, // practice: no target, no result
     cond: conditions ? resolveConditions(conditions) : NEUTRAL, // sky, wind, pitch, outfield
+    umpireBad: umpire?.bad ?? 0,
+    drs: !!umpire?.drs,
+    reviewsLeft: nets ? Infinity : 3,
   };
   m.target = setTarget(diff, rng);
 
@@ -85,7 +94,8 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
       o.foot = 'stance';
       o.out = del.isWide ? null : law.out;
       o.pad = law.pad;
-      o.call = o.out ? (o.out === 'bowled' ? 'BOWLED' : 'LBW') : del.isWide ? 'WIDE' : law.pad ? law.call : 'Left alone';
+      if (law.pad && !del.isWide) umpireLbw(o, del, 'stance', false);
+      o.call = o.out ? (o.out === 'bowled' ? 'BOWLED' : 'LBW') : del.isWide ? 'WIDE' : law.pad ? padCall(o, law) : 'Left alone';
       return o;
     }
     const shot = resolveShot({ del, shotKey: input.shotKey, lofted: input.lofted, pressT: input.pressT, diff, rng });
@@ -97,7 +107,17 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
       o.kind = 'miss';
       o.out = del.isWide ? null : law.out;
       o.pad = law.pad;
-      o.call = o.out ? (o.out === 'bowled' ? 'BOWLED' : 'LBW') : del.isWide ? 'WIDE' : shot.call;
+      if (law.pad && !del.isWide) umpireLbw(o, del, shot.foot, true, shot.err);
+      else if (!law.pad && !o.out && !del.isWide) {
+        // Through to the keeper: did the umpire hear an edge that wasn't there?
+        const ph = decidePhantomEdge({ bad: m.umpireBad, rng });
+        if (ph) {
+          o.umpire = ph;
+          o.out = 'caught';
+          o.fielding = { type: 'catch', by: 'keeper', name: 'the keeper', phantom: true };
+        }
+      }
+      o.call = o.out ? (o.out === 'bowled' ? 'BOWLED' : o.out === 'caught' ? 'CAUGHT BEHIND' : 'LBW') : del.isWide ? 'WIDE' : law.pad ? padCall(o, law) : shot.call;
       return o;
     }
     if (shot.kind === 'playedOn') {
@@ -117,7 +137,12 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     const field = m.field.map((f) => (live[f.id] ? { ...f, x: live[f.id][0], z: live[f.id][1] } : f));
     const fld = resolveFielding(sim, field, diff, rng, { noRuns: shot.shotKey === 'defence' && shot.q < 0.5, keeperAt: live.keeper });
     o.fielding = fld;
-    if (fld.type === 'catch') {
+    if (fld.type === 'catch' && shot.edge) {
+      // An edge carried: the umpire may miss a faint one.
+      o.umpire = decideEdgeCatch({ shot, fielding: fld, bad: m.umpireBad, rng });
+      o.out = o.umpire.given ? 'caught' : null;
+      o.call = !o.out ? 'NOT OUT · edge missed' : fld.by === 'keeper' ? 'CAUGHT BEHIND' : `CAUGHT · ${fld.name}`;
+    } else if (fld.type === 'catch') {
       o.out = 'caught';
       o.call = fld.by === 'keeper' ? 'CAUGHT BEHIND' : `CAUGHT · ${fld.name}`;
     } else if (fld.type === 'boundary') {
@@ -129,6 +154,28 @@ export function createMatch({ difficulty = 'medium', seed = 1, nets = false, con
     }
     return o;
   };
+
+  /** LBW appeal: ball tracking decides the truth, the umpire the decision. */
+  function umpireLbw(o, del, foot, offered, err = null) {
+    const u = decideLbw({ del, foot, offered, err, window: diff.window, bad: m.umpireBad, rng });
+    if (!u) return;
+    o.umpire = u;
+    o.out = u.given ? 'lbw' : null;
+  }
+  const padCall = (o, law) => (o.umpire && o.umpire.truth !== 'notOut' ? 'NOT OUT · close!' : o.umpire?.track?.pitching === 'outsideLeg' ? 'Pitched outside leg' : law.call);
+  /** Given out and worth a review: an LBW, or a faint edge (or one that wasn't there). */
+  m.reviewable = (o) => !!(o.out && o.umpire?.given && (o.umpire.kind === 'lbw' || (o.umpire.kind === 'caught' && o.umpire.faint)));
+  /** The batter's review: what the evidence says. Returns { overturned, umpiresCall, lost }. */
+  m.review = (o) => {
+    const u = o.umpire;
+    const overturned = u.truth === 'notOut';
+    const umpiresCall = u.truth === 'umpiresCall';
+    const lost = !overturned && !umpiresCall;
+    if (lost && m.reviewsLeft !== Infinity) m.reviewsLeft--;
+    return { overturned, umpiresCall, lost };
+  };
+  /** The same ball, given not out after a review. */
+  m.overturn = (o) => ({ ...o, out: null, overturned: true, fielding: o.fielding?.phantom ? null : o.fielding && { ...o.fielding, type: 'field', runs: 0 }, runs: 0, call: 'NOT OUT · overturned on review' });
 
   m.record = (o) => {
     const total = o.runs + o.extras;

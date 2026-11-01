@@ -25,6 +25,7 @@ export const ACTIONS = [
   ['pad', 'Controller panel', 'K'],
   ['replay', 'Replay the last ball', 'R'],
   ['scorecard', 'Scorecard', 'B'],
+  ['review', 'Review the decision (DRS)', 'V'],
   ['confirm', 'Confirm on cards (start, submit)', 'Enter'],
   ['back', 'Back on cards (close, skip)', 'Esc'],
 ];
@@ -39,7 +40,7 @@ export const BUTTON_NAMES = {
 export const buttonName = (i) => (i === null || i === undefined ? '—' : BUTTON_NAMES[i] ?? `Button ${i}`);
 
 export const DEFAULTS = {
-  map: { ground: 0, lofted: 3, special: 2, skip: 1, pause: 9, camera: 4, feedback: 5, tune: 8, help: null, pad: 16, replay: 6, scorecard: 11, confirm: 0, back: 1 },
+  map: { ground: 0, lofted: 3, special: 2, skip: 1, pause: 9, camera: 4, feedback: 5, tune: 8, help: null, pad: 16, replay: 6, scorecard: 11, review: 7, confirm: 0, back: 1 },
   dirSource: 'both', // 'dpad' | 'stick' | 'both'
   deadzone: 0.45,
 };
@@ -141,6 +142,8 @@ export function createGamepad({ onShot, onKey, cardOpen = () => false, onConnect
         else if (is('help')) onKey('help');
         else if (is('replay')) onKey('replay');
         else if (is('scorecard')) onKey('scorecard');
+      else if (is('review')) onKey('review');
+        else if (is('review')) onKey('review');
         else if (is('camera')) onKey('camera');
         else if (is('skip')) onKey('skip');
         continue;

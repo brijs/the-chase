@@ -66,11 +66,17 @@ export function createConditionsPanel({ root, ctl, getChoice, setChoice, editabl
   let prevPhase = null;
 
   function draw() {
-    const { sel, random } = getChoice();
+    const { sel, random, umpire = { bad: 0.25, drs: true } } = getChoice();
     const can = editable();
     el.innerHTML = `<h2>Conditions</h2>
       <div class="st">${can ? 'Fixed for the match once you start. In the nets they change from the next ball.' : 'Set for this match. Change them before the next one.'}</div>
       ${GROUPS.map(([g, label, table]) => `<div class="k">${label}</div><div class="opts">${Object.entries(table).map(([k, v]) => `<button data-g="${g}" data-k="${k}" class="${sel[g] === k ? 'on' : ''}" ${can ? '' : 'disabled'}>${v.icon ? `${v.icon} ` : ''}${v.name}</button>`).join('')}</div>${g === 'wind' ? '' : `<div class="what">${what(g, sel)}</div>`}`).join('')}
+      <div class="k">UMPIRES</div>
+      <div class="opts" style="align-items:center;gap:8px">
+        <span>Close calls wrong</span><input type="range" min="0" max="0.6" step="0.05" value="${umpire.bad}" data-ump ${can ? '' : 'disabled'} style="flex:1;min-width:140px;accent-color:#9a2731"><b>${Math.round(umpire.bad * 100)}%</b>
+        <label><input type="checkbox" data-act="drs" ${umpire.drs ? 'checked' : ''} ${can ? '' : 'disabled'}> DRS: 3 reviews (V)</label>
+      </div>
+      <div class="what">${umpire.bad === 0 ? 'Perfect umpires: every close call is right.' : `A plumb one is rarely missed; a near miss, a faint edge or a feather off the bat before the pad goes the wrong way up to ${Math.round(umpire.bad * 100)}% of the time.`}${umpire.drs ? ' Given out LBW or caught off a faint edge, you get 10 s to review; a review that ends on umpire\'s call is kept.' : ''}</div>
       <div class="row">
         <button data-act="roll" ${can ? '' : 'disabled'}>🎲 Random day</button>
         <button data-act="std" ${can ? '' : 'disabled'}>Standard</button>
@@ -92,7 +98,19 @@ export function createConditionsPanel({ root, ctl, getChoice, setChoice, editabl
     else if (b.dataset.act === 'std') setChoice({ ...choice, sel: { sky: 'cloudy', wind: 'calm', windDir: 'offSide', pitch: 'standard', outfield: 'standard' } });
     draw();
   });
+  el.addEventListener('input', (e) => {
+    if (e.target.dataset.ump === undefined || !editable()) return;
+    const choice = getChoice();
+    setChoice({ ...choice, umpire: { ...choice.umpire, bad: +e.target.value } });
+    e.target.nextElementSibling.textContent = `${Math.round(+e.target.value * 100)}%`;
+  });
   el.addEventListener('change', (e) => {
+    if (e.target.dataset.ump !== undefined) return draw();
+    if (e.target.dataset.act === 'drs' && editable()) {
+      const choice = getChoice();
+      setChoice({ ...choice, umpire: { ...choice.umpire, drs: e.target.checked } });
+      return draw();
+    }
     if (e.target.dataset.act !== 'random' || !editable()) return;
     const choice = getChoice();
     setChoice({ ...choice, random: e.target.checked, sel: e.target.checked ? randomConditions() : choice.sel });

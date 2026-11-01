@@ -393,6 +393,10 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     cur.outcome = o;
     const { del, tR } = cur;
     const s = roles.striker;
+    // Given out, and the batter may review it: everything after the umpire's
+    // finger waits for the decision (no walk-off, no score, no next ball).
+    const offer = m.drs && !ctl.noReviews && m.reviewable(o) && m.reviewsLeft > 0;
+    cur.holdWicket = offer;
 
     if (input) scheduleShot(s, input, o, tR + input.pressT, cur);
     ballPlan.cutFrom(tR);
@@ -408,7 +412,6 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     } else {
       r = scheduleNoContact(o, cur);
     }
-    const { tDead, holder, side } = r;
     sounds(o, cur, r, tNow);
 
     // Umpire.
@@ -437,7 +440,50 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     }
     const tMark = walkTo('bowler', tReact, [MARK.x, MARK.z], { yaw: BOWL_YAW_RUN, speed: 4.8, min: 2.4, easeK: 0.5 });
 
-    const tThrowBack = Math.max(tDead + 0.5, tR + 1.8);
+    const ctx = { r, tCall, tReveal, tMark, s, tNow };
+    if (offer) {
+      // The batter has a few seconds to ask for it once the finger is up.
+      const tOffer = (r.tOut ?? tCall) + 1.0 + 0.7;
+      cur.review = { o, ctx, tOffer, state: 'waiting' };
+      at(tOffer, (t) => {
+        cur.review.state = 'offered';
+        ctl.phase = 'review';
+        onEvent('review-offer', { o, cur, reviewsLeft: m.reviewsLeft, tOffer: t });
+      });
+      return;
+    }
+    settle(o, cur, ctx);
+  }
+
+  /**
+   * After the review offer: 'accept' (walk off), or the review's verdict
+   * { overturned, umpiresCall, lost }. Play resumes from now with the final
+   * decision: a walk-off, or not out and on with the game.
+   */
+  ctl.settleReview = (result) => {
+    const cur = ctl.cur;
+    if (!cur?.review || cur.review.state === 'settled') return;
+    cur.review.state = 'settled';
+    cur.review.result = result;
+    let o = cur.review.o;
+    if (result !== 'accept' && result.overturned) o = ctl.m.overturn(o);
+    cur.outcome = o;
+    const tNow = ctl.t;
+    const ctx = { ...cur.review.ctx, tNow, late: true };
+    // The tail of the ball, from now: the batter goes (or stays), the score, the next ball.
+    if (o.out && !ctl.nets) wicketFall(ctx.s, tNow + 0.3, cur);
+    else runBatters(0, tNow - 0.6, cur);
+    ctx.tReveal = Math.max(ctx.tReveal, tNow);
+    ctl.phase = 'live';
+    settle(o, cur, ctx);
+  };
+
+  /** Everything after the ball is decided: the ball back to the bowler, the score, the next ball. */
+  function settle(o, cur, { r, tCall, tReveal, tMark, s, tNow, late = false }) {
+    const m = ctl.m;
+    const { tR } = cur;
+    const { tDead, holder, side } = r;
+    const tThrowBack = Math.max(tDead + 0.5, tR + 1.8, late ? tNow + 0.6 : 0);
     let tHas;
     if (holder === 'gone') {
       // Lost in the crowd: a new ball out of the umpire's pocket, tossed over.
@@ -468,7 +514,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     // Score it.
     const rec = m.record(o);
     let nextT0 = Math.max(tMark + 0.25, tHas + 0.5, cur.battersReady ?? 0);
-    hud.result({ m, o, cur, t: Math.max(tCall + 0.3, tReveal), describe: describeDelivery(o.spec) });
+    hud.result({ m, o, cur, t: Math.max(tCall + 0.3, tReveal), describe: describeDelivery(o.spec), reviewed: cur.review?.result });
     at(Math.max(tCall + 0.6, tReveal + 0.3), (t) => {
       if (ctl.nets) board.show(['NETS', `${m.log.length} BALLS`], boardVerdict(o), t);
       else board.show([`TARGET ${m.target}   ${m.overText()} OV`, `${m.runs}-${m.wkts}`], boardVerdict(o), t);
@@ -479,9 +525,9 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
 
     if (rec.result) {
       ctl.phase = 'ending';
-      if (m.result === 'won') sfx(tCall + 0.8, 'roar');
-      else sfx(tCall + 1.5, 'applause', { size: 0.4 });
-      at(Math.max(tCall + 2.6, tDead + 1.2), (t) => {
+      if (m.result === 'won') sfx(Math.max(tCall + 0.8, tNow), 'roar');
+      else sfx(Math.max(tCall + 1.5, tNow + 1), 'applause', { size: 0.4 });
+      at(Math.max(tCall + 2.6, tDead + 1.2, late ? tNow + 2.5 : 0), (t) => {
         ctl.phase = 'result';
         hud.final(m, t);
         board.show([`TARGET ${m.target}`, `${m.runs}-${m.wkts}`], m.result === 'won' ? 'CHASE WON' : m.result === 'tied' ? 'TIED' : 'CHASE LOST', t);
@@ -489,11 +535,11 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       });
       return;
     }
-    if (rec.overEnd && !o.out && o.runs < 4) sfx(tCall + 1.4, 'applause', { size: 0.15 });
+    if (rec.overEnd && !o.out && o.runs < 4) sfx(Math.max(tCall + 1.4, tNow), 'applause', { size: 0.15 });
     if (rec.overEnd && ctl.nets) m.startOver(); // new AI plan, same nets field
     else if (rec.overEnd) {
       const plan = m.startOver();
-      const tf = Math.max(tCall + 2.0, nextT0 - 2.0);
+      const tf = Math.max(tCall + 2.0, nextT0 - 2.0, late ? tNow + 1.0 : 0);
       at(tf, (t) => {
         setField(m.field, t, true);
         hud.over(m, plan, t);
@@ -518,7 +564,8 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       if (f.type === 'catch') {
         if (f.by === 'keeper' || f.by.startsWith('slip')) S(tc + 0.08, 'appeal');
         S(tI, 'glove', { peak: 0.5 });
-        S(tI + 0.12, 'roar');
+        // Given not out (the umpire missed the edge): the ground groans instead.
+        S(tI + 0.12, o.out ? 'roar' : 'ooh', o.out ? undefined : { size: 0.9 });
       } else if (f.type === 'drop') {
         S(tI, 'glove', { peak: 0.3 });
         S(tI + 0.1, 'ooh', { size: 1 });
@@ -546,6 +593,11 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       S(tR + del.tStumps + 0.1, 'roar');
     } else if (o.out === 'lbw') {
       sfx(Math.max(tNow, tR + pad.t + 0.12), 'appeal');
+      sfx((r.tOut ?? tR + del.tStumps) + 1.05, 'roar');
+    } else if (o.out === 'caught') {
+      // Caught behind off nothing at all: the keeper's take, the appeal, the finger.
+      sfx(tR + del.tKeeper, 'glove', { peak: 0.45 });
+      sfx(Math.max(tNow, tR + del.tKeeper + 0.08), 'appeal');
       sfx((r.tOut ?? tR + del.tStumps) + 1.05, 'roar');
     } else {
       if (pad) sfx(Math.max(tNow, tR + pad.t + 0.15), 'appeal');
@@ -679,7 +731,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
       tDead = tArrive;
     }
     const runsEnd = runBatters(out || four ? 0 : o.runs, tc, cur);
-    if (out && !ctl.nets) wicketFall(roles.striker, tI + 0.4, cur);
+    if (out && !ctl.nets && !cur.holdWicket) wicketFall(roles.striker, tI + 0.4, cur);
     return { tDead: Math.max(tDead, runsEnd), holder, side: hside, tOut: out ? tI : null };
   }
 
@@ -918,7 +970,9 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     }));
     ballPlan.add(tR, tK, (t) => ({ pos: del.pos(t - tR), flying: true }), 'delivery');
     ballPlan.rest(tK, () => hold('keeper', 'both'));
-    if (o.out && !ctl.nets) wicketFall(s, tK + 0.6, cur);
+    if (cur.holdWicket) {
+      // (Decided after the review offer.)
+    } else if (o.out && !ctl.nets) wicketFall(s, tK + 0.6, cur);
     else runBatters(0, tR + 0.6, cur);
     return { tDead: tK + 0.4, holder: 'keeper', side: 'both', tOut: tR + del.tStumps };
   }
@@ -939,7 +993,9 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     field('keeper', [last.x, last.z], tH + 0.3, tK, 'pickup', { ballAt: new THREE.Vector3(last.x, BALL_R, last.z), tGather: tK + 0.2, tThrow: tK + 0.9, noThrow: true });
     ballPlan.add(tK, tK + 0.08, (t) => ({ blendFrom: new THREE.Vector3(last.x, BALL_R, last.z), k: smooth(win(t, tK, tK + 0.08)), hold: ['keeper', 'L'] }));
     ballPlan.rest(tK + 0.08, () => hold('keeper', 'L'));
-    if (cur.outcome.out && !ctl.nets) wicketFall(s, tH + 0.8, cur);
+    if (cur.holdWicket) {
+      // (Decided after the review offer.)
+    } else if (cur.outcome.out && !ctl.nets) wicketFall(s, tH + 0.8, cur);
     else runBatters(0, tH, cur);
     return { tDead: tK + 0.4, holder: 'keeper', side: 'L', tOut: tH };
   }
@@ -1026,7 +1082,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
     // The non-striker walks back to his crease.
     const N = roles.nonStriker;
     if (homes[N].x !== NS_BASE[0]) {
-      const tb = cur.tR + 1.4;
+      const tb = Math.max(cur.tR + 1.4, ctl.t); // (later, after a review)
       plans[N].add(tb, tb + 1.6, (t) => {
         const w = walkLeg(t, tb, tb + 1.6, NS_UP, NS_BASE);
         return { ...w, yaw: lerpAngle(PI / 2, -PI / 2, smooth(win(t, tb + 1.2, tb + 1.6))), bat: BATS.WALK, ik: false };
@@ -1172,12 +1228,12 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
   }
 
   // ---------------------------------------------------------------- lifecycle
-  /** opts.nets: practice, no target or result, the field stays at opts.field. opts.conditions: the day (conditions.js). */
+  /** opts.nets: practice, no target or result, the field stays at opts.field. opts.conditions: the day (conditions.js). opts.umpire: { bad, drs }. */
   function startMatch(difficulty, seed, opts = {}) {
     ctl.difficulty = difficulty;
     ctl.seed = seed;
     ctl.nets = !!opts.nets;
-    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets, conditions: opts.conditions });
+    ctl.m = createMatch({ difficulty, seed, nets: ctl.nets, conditions: opts.conditions, umpire: opts.umpire });
     ctl.events = [];
     ctl.cur = null;
     ctl.ff = false;
@@ -1208,7 +1264,7 @@ export function createController({ scene, cast, fx, board, ground, hud, onEvent 
 
   /** Advance game time by dt real seconds; fast-forward runs dead time at 4x. */
   function update(dt) {
-    if (['paused', 'feedback', 'tuning', 'scorecard', 'replay'].includes(ctl.phase)) return;
+    if (['paused', 'feedback', 'tuning', 'scorecard', 'replay', 'review', 'drs'].includes(ctl.phase)) return;
     // Fast-forward only ever skips dead time: never through a live delivery.
     if (ctl.ff && !(ctl.phase === 'live' && ctl.cur?.resolved && ctl.t < (ctl.nextT0 ?? 0) - 0.3)) ctl.ff = false;
     ctl.t += dt * (ctl.ff ? 4 : 1);

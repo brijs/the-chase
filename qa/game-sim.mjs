@@ -27,6 +27,9 @@ const GAMES = +(process.env.GAMES || 300);
 // COND='{"sky":"overcast","pitch":"green"}' plays every game in those conditions.
 const COND = process.env.COND ? JSON.parse(process.env.COND) : null;
 if (COND) console.log('conditions', JSON.stringify(COND));
+// UMP=0.25 plays with an umpire who gets close calls wrong (and no reviews).
+const UMP = process.env.UMP ? { bad: +process.env.UMP, drs: false } : null;
+if (UMP) console.log('umpire error', UMP.bad);
 const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 
 function bot(kind, r) {
@@ -51,7 +54,7 @@ function bot(kind, r) {
 }
 
 function play(difficulty, kind, seed) {
-  const m = createMatch({ difficulty, seed, conditions: COND });
+  const m = createMatch({ difficulty, seed, conditions: COND, umpire: UMP });
   const r = makeRng(seed * 7 + 3);
   const b = bot(kind, r);
   const tally = {};
