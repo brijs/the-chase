@@ -107,9 +107,24 @@ await writeFile('short-ball.html', page(`<script>${safeJs}</script>`));
 // Both share one script file; the page says which to open.
 await mkdir('site', { recursive: true });
 await writeFile('site/app.js', js);
-const game = { title: 'The Chase — a pixel cricket game', label: 'The Chase: a pixel cricket game. You bat; the AI bowls pace and spin.', head: '\n<meta name="description" content="A pixel cricket game in the browser: you bat, the AI bowls pace and spin, sets the field and learns where you score." />' };
+// Touch-only devices (phones, tablets without a mouse) first see mobile.html: the game plays best
+// with a keyboard or controller. "Play anyway" comes back with ?force=1 (remembered for the tab).
+const mobileGate = `
+<script>
+  (function () {
+    try {
+      var mm = function (q) { return window.matchMedia && matchMedia(q).matches; };
+      var touchOnly = mm('(pointer: coarse)') && !mm('(any-pointer: fine)');
+      var forced = /[?&]force=1/.test(location.search);
+      try { if (forced) sessionStorage.setItem('chase-force', '1'); else forced = sessionStorage.getItem('chase-force') === '1'; } catch (e) {}
+      if (touchOnly && !forced) location.replace('mobile.html');
+    } catch (e) {}
+  })();
+</script>`;
+const game = { title: 'The Chase — a pixel cricket game', label: 'The Chase: a pixel cricket game. You bat; the AI bowls pace and spin.', head: '\n<meta name="description" content="A pixel cricket game in the browser: you bat, the AI bowls pace and spin, sets the field and learns where you score." />' + mobileGate };
 await writeFile('site/index.html', page(`<script>window.__CHASE_MODE = 'game'; window.__DIORAMA_URL = 'diorama.html';</script>\n<script src="./app.js"></script>`, game));
 await writeFile('site/diorama.html', page(`<script>window.__CHASE_MODE = 'diorama';</script>\n<script src="./app.js"></script>`));
+await writeFile('site/mobile.html', await readFile('mobile.html', 'utf8'));
 await writeFile('site/.nojekyll', '');
 
 console.log(`built dist/app.js (${(js.length / 1024).toFixed(0)} kB), index.html, short-ball.html, site/`);
